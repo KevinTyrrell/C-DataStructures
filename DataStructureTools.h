@@ -1,0 +1,18 @@
+#pragma once
+
+#include <stdio.h>
+#include <Windows.h>
+#include <stdbool.h>
+#include <conio.h>
+
+#define DS_LIGHT_RED 12
+#define VK_Y 0x59
+#define VK_N 0x4E
+#define DS_MSG_EXIT "Exit Runtime"
+#define DS_MSG_OUT_OF_MEM "Not enough memory to allocate for this variable!"
+#define DS_MSG_OUT_OF_BOUNDS "Requested index was out of bounds!"
+
+/* Print out an error to the Console window in color. */
+void ds_Error(const char *message);
+/* Prompt the user to press the Y or N key. */
+bool ds_YesNo(const char *message);
