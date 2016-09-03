@@ -13,7 +13,7 @@ const static float LOAD_FACTOR = 0.75;
 /* Gets the size of the HashMap depending on whether the NULL keyset is involved or not. */
 static size_t hm_getSize(const struct HashMap *map, bool includingNull);
 /* Locates a given Node in the HashMap, if it exists, by key. */
-static struct hm_Node* hm_find(struct HashMap *map, void* key);
+static struct hm_Node* hm_find(const struct HashMap *map, void* key);
 
 /* Constructor function. */
 struct HashMap* HashMap_new(size_t capacity, unsigned int(*hash)(void*),
@@ -70,7 +70,7 @@ Locates a given Node in the HashMap, if it exists, by key.
 
 Returns NULL if it cannot be located.
 */
-static struct hm_Node* hm_find(struct HashMap *map, void* key)
+static struct hm_Node* hm_find(const struct HashMap *map, void* key)
 {
 	// Null keys must be handled differently.
 	if (key != NULL)
@@ -243,7 +243,8 @@ Remember to free the returned array of hm_Nodes.
 */
 struct hm_Node** hm_KeySet(const struct HashMap *map)
 {
-	struct hm_Node **keySet = malloc(hm_getSize(map, true) * sizeof(struct hm_Node*));
+	// +1 to include the NULL terminating character.
+	struct hm_Node **keySet = malloc((hm_getSize(map, true) + 1) * sizeof(struct hm_Node*));
 	if (keySet == NULL)
 		ds_Error(DS_MSG_OUT_OF_MEM);
 
@@ -252,8 +253,9 @@ struct hm_Node** hm_KeySet(const struct HashMap *map)
 		for (struct hm_Node *iter = map->table[i]; iter != NULL; iter = iter->next)
 			keySet[h++] = iter;
 	if (map->nullKeySet != NULL)
-		keySet[h] = map->nullKeySet;
-
+		keySet[h++] = map->nullKeySet;
+	// Terminating index.
+	keySet[h] = NULL;
 	return keySet;
 }
 
