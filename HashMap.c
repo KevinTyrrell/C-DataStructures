@@ -203,15 +203,17 @@ void hm_clear(struct HashMap *map)
 {
 	// Destroy the table.
 	for (size_t i = 0; i < map->capacity; i++)
-		free(map->table[i]);
-	free(map->table);
-
-	// Create a new table for our HashMap.
-	map->table = hm_Table_new(0);
-	map->capacity = DEFAULT_INITIAL_CAPACITY;
+		for (struct hm_Node *iter = map->table[i], *temp = NULL; iter != NULL; iter = temp)
+		{
+			temp = iter->next;
+			free(iter);
+		}
 	free(map->nullKeySet);
-	map->nullKeySet = NULL;
+	free(map->table);
+	size_t tableSize = 0;
+	map->table = hm_Table_new(&tableSize);
 	map->size = 0;
+	map->capacity = DEFAULT_INITIAL_CAPACITY;	
 }
 
 /* 
@@ -290,6 +292,14 @@ static size_t hm_getSize(const struct HashMap *map, bool includingNull)
 /* Deconstructor function. */
 void hm_destroy(struct HashMap *map)
 {
-	hm_clear(map);
+	// Destroy the table.
+	for (size_t i = 0; i < map->capacity; i++)
+		for (struct hm_Node *iter = map->table[i], *temp = NULL; iter != NULL; iter = temp) 
+		{
+			temp = iter->next;
+			free(iter);
+		}
+	free(map->table);
+	free(map->nullKeySet);
 	free(map);
 }
