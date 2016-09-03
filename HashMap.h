@@ -50,12 +50,14 @@ void hm_put(struct HashMap *map, void *key, void *value);
 void* hm_get(const struct HashMap *map, const void *key);
 /* Removes a Key/Value pair from the HashMap when provided with a key. */
 void* hm_remove(struct HashMap *map, void *key);
-/* Clear the HashMap of all Key/Value pairs. */
-void hm_clear(struct HashMap *map);
+/* Check if a given element in the HashMap exists. */
+bool hm_contains(struct HashMap *map, void *key);
 /* Return an array with all Keys/Values currently in the HashMap. */
 struct hm_Node** hm_KeySet(const struct HashMap *map);
 /* Prints out the inner table of the HashMap. */
 void hm_print(const struct HashMap *map);
+/* Clear the HashMap of all Key/Value pairs. */
+void hm_clear(struct HashMap *map);
 /* Return a copy of the HashMap. */
 struct HashMap* hm_clone(const struct HashMap *map);
 /* Deconstructor function. */

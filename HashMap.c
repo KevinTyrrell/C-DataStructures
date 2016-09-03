@@ -12,6 +12,8 @@ const static size_t DEFAULT_INITIAL_CAPACITY = 16;
 const static float LOAD_FACTOR = 0.75;
 /* Gets the size of the HashMap depending on whether the NULL keyset is involved or not. */
 static size_t hm_getSize(const struct HashMap *map, bool includingNull);
+/* Locates a given Node in the HashMap, if it exists, by key. */
+static struct hm_Node* hm_find(struct HashMap *map, void* key);
 
 /* Constructor function. */
 struct HashMap* HashMap_new(size_t capacity, unsigned int(*hash)(void*),
@@ -60,6 +62,31 @@ static struct hm_Node** hm_Table_new(size_t *capacity)
 	if (table == NULL)
 		ds_Error(DS_MSG_OUT_OF_MEM);
 	return table;
+}
+
+/*
+Helper function.
+Locates a given Node in the HashMap, if it exists, by key.
+
+Returns NULL if it cannot be located.
+*/
+static struct hm_Node* hm_find(struct HashMap *map, void* key)
+{
+	// Null keys must be handled differently.
+	if (key != NULL)
+	{
+		// Bitwise modulus.
+		size_t index = map->hash(key) & (map->capacity - 1);
+
+		for (struct hm_Node *iter = map->table[index]; iter != NULL; iter = iter->next)
+			// Key matches this node, return the value associated with it.
+			if (map->equals(iter->key, key))
+				return iter;
+	}
+	else if (map->nullKeySet != NULL && map->equals(map->nullKeySet->key, key))
+		return map->nullKeySet;
+
+	return NULL;
 }
 
 /*
@@ -118,7 +145,6 @@ void hm_put(struct HashMap *map, void *key, void *value)
 					return;
 				}
 			}
-
 			iter->next = insert;
 		}
 
@@ -126,7 +152,7 @@ void hm_put(struct HashMap *map, void *key, void *value)
 	}
 	else
 	{
-		// Overwrite old NULL key.
+		// Overwrite old KeySet.
 		if (map->nullKeySet != NULL)
 			free(map->nullKeySet);
 		else
@@ -143,20 +169,8 @@ Returns NULL if no such key exists.
 */
 void* hm_get(const struct HashMap *map, void *key)
 {
-	if (key != NULL)
-	{
-		// Bitwise modulus.
-		size_t index = map->hash(key) & (map->capacity - 1);
-
-		for (struct hm_Node *iter = map->table[index]; iter != NULL; iter = iter->next)
-			// Key matches this node, return the value associated with it.
-			if (map->equals(iter->key, key))
-				return iter->value;
-	}
-	else if (map->nullKeySet != NULL && map->equals(map->nullKeySet->key, key))
-		return map->nullKeySet->value;
-
-	return NULL;
+	struct hm_Node *retrieved = hm_find(map, key);
+	return retrieved != NULL ? retrieved->value : NULL;
 }
 
 /*
@@ -196,6 +210,12 @@ void* hm_remove(struct HashMap *map, void *key)
 	}
 
 	return NULL;
+}
+
+/* Check if a given element in the HashMap exists. */
+bool hm_contains(struct HashMap *map, void *key)
+{
+	return hm_find(map, key) != NULL;
 }
 
 /* Clear the HashMap of all Key/Value pairs. */
