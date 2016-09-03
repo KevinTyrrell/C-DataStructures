@@ -5,5 +5,5 @@ The following are static libraries for use in my C coding projects. They were wr
 
 | Data Structure | Header File  | C File       | Constructor Function | Functions needed for the constructor |
 | -------------- | ------------ | ------------ | -------------------- | ----- |
-| LinkedList     | LinkedList.h | LinkedList.h | LinkedList_new()	  | equals(void*, void*), toString(void*)
+| LinkedList     | LinkedList.h | LinkedList.c | LinkedList_new()	  | equals(void*, void*), toString(void*)
 | HashMap		 | HashMap.h	| HashMap.c    | HashMap_new()		  | unsigned int hash(void*), equals(void*, void*), toString(void*)
