@@ -1,6 +1,10 @@
 
 #include "DataStructureTools.h"
 
+#define DS_LIGHT_RED 12
+#define VK_Y 0x59
+#define VK_N 0x4E
+
 #define Y_LC_KEY_CODE 121
 #define Y_UC_KEY_CODE 89
 #define N_LC_KEY_CODE 110

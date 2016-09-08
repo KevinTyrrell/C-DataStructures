@@ -55,7 +55,7 @@ static struct hm_Node** hm_Table_new(size_t *capacity)
 	If capacity is not, the bitwise operator &
 	will NOT work. Otherwise, just use a default capacity.
 	*/
-	double val = log(*capacity) / log(2.0);
+	double val = log((double)*capacity) / log(2.0);
 	*capacity = (val - floor(val) < 1e-8) ? *capacity : DEFAULT_INITIAL_CAPACITY;
 
 	struct hm_Node** table = calloc(*capacity, sizeof(struct Node*));
@@ -262,12 +262,12 @@ struct hm_Node** hm_KeySet(const struct HashMap *map)
 /* Prints out the inner table of the HashMap. */
 void hm_print(const struct HashMap *map)
 {
-	printf_s("Map Capacity: %d, Map Size: %d\n", map->capacity, map->size);
+	printf_s("Map Capacity: %zu, Map Size: %zu\n", map->capacity, map->size);
 	if (map->nullKeySet != NULL)
 		printf_s("%s%s\n", "[NULL]: ", map->toString(map->nullKeySet->value));
 	for (size_t i = 0; i < map->capacity; i++)
 	{
-		printf_s("%c%d%s", '[', i, "]: ");
+		printf_s("%c%zu%s", '[', i, "]: ");
 		for (struct hm_Node *iter = map->table[i]; iter != NULL; iter = iter->next)
 		{
 			printf_s("%s", map->toString(iter->value));

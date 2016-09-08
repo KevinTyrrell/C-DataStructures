@@ -5,9 +5,6 @@
 #include <stdbool.h>
 #include <conio.h>
 
-#define DS_LIGHT_RED 12
-#define VK_Y 0x59
-#define VK_N 0x4E
 #define DS_MSG_EXIT "Exit Runtime"
 #define DS_MSG_OUT_OF_MEM "Not enough memory to allocate for this variable!"
 #define DS_MSG_OUT_OF_BOUNDS "Requested index was out of bounds!"

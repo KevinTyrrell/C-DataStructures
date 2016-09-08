@@ -44,6 +44,7 @@ The second compares the two KEYS and returns 0 if they are equal.
 The third function must return the String representation of the VALUE.
 */
 struct HashMap* HashMap_new(size_t capacity, unsigned int(*hash)(void*), bool(*equals)(void*, void*), char*(*toString)(void*));
+
 /* Place a Key/Value pair into the HashMap. */
 void hm_put(struct HashMap *map, void *key, void *value);
 /* Gets a value from the HashMap when provided with a key. */

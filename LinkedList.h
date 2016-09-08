@@ -30,7 +30,12 @@ struct ll_Node
 	struct ll_Node *next, *prev;
 };
 
-/* Constructor function. */
+/*
+Constructor function.
+Must pass in two function pointers.
+The first compares two data elements and returns true if they are the same.
+The second function must return the String representation of the data.
+*/
 struct LinkedList* LinkedList_new(bool(*equals)(void*, void*), char*(*toString)(void*));
 
 /* Adds data at the front of the LinkedList. */
