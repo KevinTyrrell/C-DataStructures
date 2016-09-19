@@ -59,7 +59,7 @@ struct hm_Node** hm_KeySet(const struct HashMap *map);
 void hm_print(const struct HashMap *map);
 /* Clear the HashMap of all Key/Value pairs. */
 void hm_clear(struct HashMap *map);
-/* Return a copy of the HashMap. */
+/* Returns a shallow copy of the HashMap. */
 struct HashMap* hm_clone(const struct HashMap *map);
 /* De-constructor function. */
 void hm_destroy(struct HashMap *map);

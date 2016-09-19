@@ -3,26 +3,28 @@
 
 /* Static functions. */
 static struct hm_Node* hm_Node_new(void *key, void *value);
-// Note: capacity is a pointer so we can change its value in between functions.
+/* Note: Capacity is a pointer so we can change its value inside the function. */
 static struct hm_Node** hm_Table_new(size_t *capacity);
+static size_t hm_getSize(const struct HashMap *map, bool includingNull);
+static struct hm_Node* hm_find(const struct HashMap *map, void* key);
 
 /* Default capacity of the HashMap. */
 const static size_t DEFAULT_INITIAL_CAPACITY = 16;
 /* Load factor. Map expands when this percentage is reached. */
 const static float LOAD_FACTOR = 0.75;
-/* Gets the size of the HashMap depending on whether the NULL keyset is involved or not. */
-static size_t hm_getSize(const struct HashMap *map, bool includingNull);
-/* Locates a given Node in the HashMap, if it exists, by key. */
-static struct hm_Node* hm_find(const struct HashMap *map, void* key);
+
+/* Local typedefs. */
+typedef struct hm_Node Node;
+typedef struct HashMap Map;
 
 /* Constructor function. */
 struct HashMap* HashMap_new(size_t capacity, unsigned int(*hash)(void*),
 	bool(*equals)(void*, void*), char*(*toString)(void*))
 {
-	struct HashMap *map = calloc(1, sizeof(struct HashMap));
+	Map *map = calloc(1, sizeof(Map));
 	if (map == NULL)
 		ds_Error(DS_MSG_OUT_OF_MEM);
-	// Function pointers.
+	/* Function pointers. */
 	map->hash = hash;
 	map->equals = equals;
 	map->toString = toString;
@@ -35,7 +37,7 @@ struct HashMap* HashMap_new(size_t capacity, unsigned int(*hash)(void*),
 /* Constructor function. */
 static struct hm_Node* hm_Node_new(void *key, void *value)
 {
-	struct hm_Node *entry = calloc(1, sizeof(struct hm_Node));
+	Node *entry = calloc(1, sizeof(Node));
 	if (entry == NULL)
 		ds_Error(DS_MSG_OUT_OF_MEM);
 	entry->key = key;
@@ -43,22 +45,17 @@ static struct hm_Node* hm_Node_new(void *key, void *value)
 	return entry;
 }
 
-/*
-Constructor helper function.
-
-Creates an array of Nodes.
-*/
+/* Returns an array of Nodes. 
+Capacity will be defaulted if parameter is not a power of 2. */
 static struct hm_Node** hm_Table_new(size_t *capacity)
 {
-	/*
-	Make sure the capacity is a power of 2.
+	/* Make sure the capacity is a power of 2.
 	If capacity is not, the bitwise operator &
-	will NOT work. Otherwise, just use a default capacity.
-	*/
+	will NOT work. Otherwise, just use a default capacity. */
 	double val = log((double)*capacity) / log(2.0);
 	*capacity = (val - floor(val) < 1e-8) ? *capacity : DEFAULT_INITIAL_CAPACITY;
 
-	struct hm_Node** table = calloc(*capacity, sizeof(struct Node*));
+	Node** table = calloc(*capacity, sizeof(Node*));
 	if (table == NULL)
 		ds_Error(DS_MSG_OUT_OF_MEM);
 	return table;
@@ -78,7 +75,7 @@ static struct hm_Node* hm_find(const struct HashMap *map, void* key)
 		// Bitwise modulus.
 		size_t index = map->hash(key) & (map->capacity - 1);
 
-		for (struct hm_Node *iter = map->table[index]; iter != NULL; iter = iter->next)
+		for (Node *iter = map->table[index]; iter != NULL; iter = iter->next)
 			// Key matches this node, return the value associated with it.
 			if (map->equals(iter->key, key))
 				return iter;
@@ -100,12 +97,12 @@ void hm_put(struct HashMap *map, void *key, void *value)
 	if (hm_getSize(map, false) / (double)map->capacity >= LOAD_FACTOR)
 	{
 		// Temporary map that we will store our new table inside of.
-		struct HashMap *expanded = HashMap_new(map->capacity * 2, map->hash, map->equals, map->toString);
+		Map *expanded = HashMap_new(map->capacity * 2, map->hash, map->equals, map->toString);
 
 		/* Go through the old table and put each key/value pair
 		into the new table. Destroy the old nodes. */
 		for (size_t i = 0; i < map->capacity; i++)
-			for (struct hm_Node *iter = map->table[i], *prev = NULL; iter != NULL;)
+			for (Node *iter = map->table[i], *prev = NULL; iter != NULL;)
 			{
 				hm_put(expanded, iter->key, iter->value);
 				prev = iter;
@@ -121,7 +118,7 @@ void hm_put(struct HashMap *map, void *key, void *value)
 	}
 
 	// Map is correct size, proceed with insertion.
-	struct hm_Node *insert = hm_Node_new(key, value);
+	Node *insert = hm_Node_new(key, value);
 
 	// Null keys are handled differently.
 	// Make sure that we are not dealing with one.
@@ -135,16 +132,14 @@ void hm_put(struct HashMap *map, void *key, void *value)
 			map->table[index] = insert;
 		else
 		{
-			struct hm_Node *iter = map->table[index];
+			Node *iter = map->table[index];
 			for (; iter->next != NULL; iter = iter->next)
-			{
 				// Duplicate key was entered, overwrite old value.
 				if (map->equals(iter->key, key))
 				{
 					iter->value = value;
 					return;
 				}
-			}
 			iter->next = insert;
 		}
 
@@ -169,7 +164,7 @@ Returns NULL if no such key exists.
 */
 void* hm_get(const struct HashMap *map, void *key)
 {
-	struct hm_Node *retrieved = hm_find(map, key);
+	Node *retrieved = hm_find(map, key);
 	return retrieved != NULL ? retrieved->value : NULL;
 }
 
@@ -186,7 +181,7 @@ void* hm_remove(struct HashMap *map, void *key)
 		// Bitwise modulus.
 		size_t index = map->hash(key) & (map->capacity - 1);
 
-		for (struct hm_Node *iter = map->table[index], *prev = NULL; iter != NULL; prev = iter, iter = iter->next)
+		for (Node *iter = map->table[index], *prev = NULL; iter != NULL; prev = iter, iter = iter->next)
 			// Keys match. Delete this Node.
 			if (map->equals(iter->key, key))
 			{
@@ -223,7 +218,7 @@ void hm_clear(struct HashMap *map)
 {
 	// Destroy the table.
 	for (size_t i = 0; i < map->capacity; i++)
-		for (struct hm_Node *iter = map->table[i], *temp = NULL; iter != NULL; iter = temp)
+		for (Node *iter = map->table[i], *temp = NULL; iter != NULL; iter = temp)
 		{
 			temp = iter->next;
 			free(iter);
@@ -244,13 +239,13 @@ Remember to free the returned array of hm_Nodes.
 struct hm_Node** hm_KeySet(const struct HashMap *map)
 {
 	// +1 to include the NULL terminating character.
-	struct hm_Node **keySet = malloc((hm_getSize(map, true) + 1) * sizeof(struct hm_Node*));
+	Node **keySet = malloc((hm_getSize(map, true) + 1) * sizeof(Node*));
 	if (keySet == NULL)
 		ds_Error(DS_MSG_OUT_OF_MEM);
 
 	size_t h = 0;
 	for (size_t i = 0; i < map->capacity; i++)
-		for (struct hm_Node *iter = map->table[i]; iter != NULL; iter = iter->next)
+		for (Node *iter = map->table[i]; iter != NULL; iter = iter->next)
 			keySet[h++] = iter;
 	if (map->nullKeySet != NULL)
 		keySet[h++] = map->nullKeySet;
@@ -268,7 +263,7 @@ void hm_print(const struct HashMap *map)
 	for (size_t i = 0; i < map->capacity; i++)
 	{
 		printf_s("%c%zu%s", '[', i, "]: ");
-		for (struct hm_Node *iter = map->table[i]; iter != NULL; iter = iter->next)
+		for (Node *iter = map->table[i]; iter != NULL; iter = iter->next)
 		{
 			printf_s("%s", map->toString(iter->value));
 			if (iter->next != NULL)
@@ -278,17 +273,13 @@ void hm_print(const struct HashMap *map)
 	}
 }
 
-/* 
-Return a copy of the HashMap. 
-
-Remember to free the returned HashMap.
-*/
+/* Returns a shallow copy of the HashMap. */
 struct HashMap* hm_clone(const struct HashMap *map)
 {
-	struct HashMap *copy = HashMap_new(map->capacity, map->hash, map->equals, map->toString);
+	Map *copy = HashMap_new(map->capacity, map->hash, map->equals, map->toString);
 
 	for (size_t i = 0; i < map->capacity; i++)
-		for (struct hm_Node *iter = map->table[i]; iter != NULL; iter = iter->next)
+		for (Node *iter = map->table[i]; iter != NULL; iter = iter->next)
 			hm_put(copy, iter->key, iter->value);
 	
 	if (map->nullKeySet != NULL)
@@ -316,7 +307,7 @@ void hm_destroy(struct HashMap *map)
 {
 	// Destroy the table.
 	for (size_t i = 0; i < map->capacity; i++)
-		for (struct hm_Node *iter = map->table[i], *temp = NULL; iter != NULL; iter = temp) 
+		for (Node *iter = map->table[i], *temp = NULL; iter != NULL; iter = temp) 
 		{
 			temp = iter->next;
 			free(iter);
