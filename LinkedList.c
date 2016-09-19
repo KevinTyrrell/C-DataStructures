@@ -1,15 +1,18 @@
 
 #include "LinkedList.h"
 
-/* Constructor function. */
-static struct ll_Node* ll_Node_new(void *data);
-/* Helper function. Locates a Node by index in the LinkedList. */
-static struct ll_Node* ll_find(const struct LinkedList *list, const size_t index);
+/* Local typedef for convenience. */
+typedef struct ll_Node Node;
+typedef struct LinkedList List;
+
+/* Local functions. */
+static Node* Node_new(void *data);
+static Node* ll_find(const struct LinkedList *list, const size_t index);
 
 /* Constructor function. */
-struct LinkedList* LinkedList_new(bool(*equals)(void*, void*), char*(*toString)(void*))
+List* LinkedList_new(bool(*equals)(void*, void*), char*(*toString)(void*))
 {
-	struct LinkedList *list = calloc(1, sizeof(struct LinkedList));
+	List *list = calloc(1, sizeof(List));
 	if (list == NULL)
 		ds_Error(DS_MSG_OUT_OF_MEM);
 	// Pointer functions.
@@ -19,47 +22,41 @@ struct LinkedList* LinkedList_new(bool(*equals)(void*, void*), char*(*toString)(
 }
 
 /* Constructor function. */
-static struct ll_Node* ll_Node_new(void *data)
+static Node* Node_new(void *data)
 {
-	struct ll_Node *node = calloc(1, sizeof(struct ll_Node));
+	Node *node = calloc(1, sizeof(Node));
 	if (node == NULL)
 		ds_Error(DS_MSG_OUT_OF_MEM);
 	node->data = data;
 	return node;
 }
 
-/*
-Helper function. Locates a Node by index in the LinkedList.
-
-O(n / 2) complexity.
-Prints an error if the index was out of bounds.
-Returns NULL if the Node cannot be located.
-*/
-static struct ll_Node* ll_find(const struct LinkedList *list, const size_t index)
+/* Inserts data at a specific position in the LinkedList. */
+void ll_add(struct LinkedList *list, const size_t index, void *data)
 {
-	if (index >= list->size)
-		ds_Error(DS_MSG_OUT_OF_BOUNDS);
+	if (list->size == 0 || index == 0)
+		ll_addFirst(list, data);
+	else if (index == list->size)
+		ll_addLast(list, data);
 	else
 	{
-		bool rootSeek = (double)index / list->size <= 0.5;
-		struct ll_Node *iter = (rootSeek ? list->root : list->tail);
-
-		for (size_t i = rootSeek ? 0 : list->size - 1; rootSeek ? i < index : i > index; 
-			rootSeek ? i++ : i--, iter = rootSeek ? iter->next : iter->prev) {}
-		return iter;
+		Node *iter = ll_find(list, index);
+		if (iter != NULL)
+		{
+			Node *insert = Node_new(data);
+			iter->prev->next = insert;
+			insert->prev = iter->prev;
+			insert->next = iter;
+			iter->prev = insert;
+			list->size++;
+		}
 	}
-
-	return NULL;
 }
 
-/*
-Adds data at the front of the LinkedList.
-
-O(1) complexity.
-*/
-void ll_add(struct LinkedList *list, void *data)
+/* Inserts data at the front of the LinkedList. */
+void ll_addFirst(struct LinkedList *list, void *data)
 {
-	struct ll_Node *insert = ll_Node_new(data);
+	Node *insert = Node_new(data);
 	
 	if (list->root == NULL)
 		list->tail = insert;
@@ -73,46 +70,14 @@ void ll_add(struct LinkedList *list, void *data)
 	list->size++;
 }
 
-/*
-Adds data at the given index in the LinkedList.
-
-O(log n) complexity (worst case).
-Prints an error if the index is out of bounds.
-*/
-void ll_addAt(struct LinkedList *list, const size_t index, void *data)
-{
-	if (list->size == 0 || index == 0)
-		ll_add(list, data);
-	else if (index == list->size)
-		ll_addLast(list, data);
-	else
-	{
-		struct ll_Node *iter = ll_find(list, index);
-		if (iter != NULL)
-		{
-			struct ll_Node *insert = ll_Node_new(data);
-			if (iter->prev != NULL)
-				iter->prev->next = insert;
-			insert->prev = iter->prev;
-			insert->next = iter;
-			iter->prev = insert;
-			list->size++;
-		}
-	}
-}
-
-/*
-Adds data to the end of the LinkedList.
-
-O(1) complexity.
-*/
+/* Inserts data at the end of the LinkedList. */
 void ll_addLast(struct LinkedList *list, void *data)
 {
 	if (list->size == 0)
-		ll_add(list, data);
+		ll_addFirst(list, data);
 	else
 	{
-		struct ll_Node *insert = ll_Node_new(data);
+		Node *insert = Node_new(data);
 		insert->prev = list->tail;
 		list->tail->next = insert;
 		list->tail = insert;
@@ -120,153 +85,145 @@ void ll_addLast(struct LinkedList *list, void *data)
 	}
 }
 
-/*
-Removes a Node at the given index.
-
-O(n/2) complexity.
-Returns the value of the removed Node.
-Returns NULL if the Node could not be found.
-*/
-void* ll_removeAt(struct LinkedList *list, const size_t index)
-{
-	if (index == 0)
-		return ll_removeFirst(list);
-	else if (index == list->size - 1)
-		return ll_removeLast(list);
-	else
-	{
-		struct ll_Node *iter = ll_find(list, index);
-		iter->prev->next = iter->next;
-		iter->next->prev = iter->prev;
-		void *val = iter->data;
-		free(iter);
-		list->size--;
-		return val;
-	}
-
-	return NULL;
-}
-
-/*
-Attempts to remove a Node with matching data, if it exists.
-
-O(n) complexity.
-Returns the value of the removed Node. NULL if the operation failed.
-*/
-void* ll_remove(struct LinkedList *list, void *data)
-{
-	size_t i = 0;
-	for (struct ll_Node *iter = list->root; iter != NULL; iter = iter->next, i++)
-		// This Node matches what we are searching for.
-		if (list->equals(iter->data, data))
-			if (i == 0)
-				return ll_removeFirst(list);
-			else if (i == list->size - 1)
-				return ll_removeLast(list);
-			else
-			{
-				iter->prev->next = iter->next;
-				iter->next->prev = iter->prev;
-				void *val = iter->data;
-				free(iter);
-				list->size--;
-				return val;
-			}
-
-	return NULL;
-}
-
-/*
-Removes the first Node of the LinkedList.
-
-O(1) complexity.
-Returns the removed value, NULL if operation failed.
-*/
-void* ll_removeFirst(struct LinkedList *list)
-{
-	if (list->size > 0)
-	{
-		void* val = list->root->data;
-		struct ll_Node *temp = (list->size > 1) ? list->root->next : NULL;
-		if (temp != NULL)
-			temp->prev = NULL;
-
-		if (list->size == 1)
-			list->tail = NULL;
-		else if (list->size == 2)
-			list->tail = temp;
-
-		free(list->root);
-		list->root = temp;
-		list->size--;
-		return val;
-	}
-
-	return NULL;
-}
-
-/*
-Removes the last Node of the LinkedList.
-
-O(1) complexity.
-Returns the removed value, NULL if the operation failed.
-*/
-void* ll_removeLast(struct LinkedList *list)
-{
-	if (list->size == 1)
-		return ll_removeFirst(list);
-	else if (list->size > 1)
-	{
-		void* val = list->tail->data;
-		struct ll_Node *temp = list->tail->prev;
-		
-		if (list->size == 2)
-			list->root = temp;
-		
-		temp->next = NULL;
-		free(list->tail);
-		list->tail = temp;
-		list->size--;
-		return val;
-	}
-
-	return NULL;
-}
-
-/*
-Destroys every Node of the LinkedList.
-
-O(n) complexity.
-*/
+/* Removes all data inside the LinkedList. */
 void ll_clear(struct LinkedList *list)
 {
-	for (struct ll_Node *iter = list->root, *prev = NULL; iter != NULL; prev = iter, iter = iter->next)
+	for (Node *iter = list->root, *prev = NULL; iter != NULL; prev = iter, iter = iter->next)
 		free(prev);
 	list->root = NULL;
 	list->tail = NULL;
 	list->size = 0;
 }
 
-/*
-Returns a copy of the LinkedList.
-
-O(n) complexity.
-*/
-struct LinkedList* ll_clone(const struct LinkedList *list)
+/* Returns a shallow copy of this LinkedList. */
+List* ll_clone(const struct LinkedList *list)
 {
-	struct LinkedList *copy = LinkedList_new(list->equals, list->toString);
+	List *copy = LinkedList_new(list->equals, list->toString);
 
-	for (struct ll_Node *iter = list->root; iter != NULL; iter = iter->next)
+	for (Node *iter = list->root; iter != NULL; iter = iter->next)
 		ll_addLast(copy, iter->data);
-
 	return copy;
 }
 
-/*
-Deconstructor function.
+/* Returns true if the LinkedList contains the specified data. */
+bool ll_contains(const struct LinkedList *list, void *data)
+{
+	for (Node *iter = list->root; iter != NULL; iter = iter->next)
+		if (list->equals(iter->data, data))
+			return true;
+	return false;
+}
 
-O(n) complexity.
-*/
+/* Returns the data at the specified position in the LinkedList. */
+void* ll_get(const struct LinkedList *list, const size_t index)
+{
+	if (list->size == 0)
+		return NULL;
+	if (index == 0)
+		return ll_getFirst(list);
+	if (index == list->size - 1)
+		return ll_getLast(list);
+	return ll_find(list, index);
+}
+
+/* Returns the data at the front of the LinkedList. */
+void* ll_getFirst(const struct LinkedList *list)
+{
+	return (list->size == 0) ? NULL : list->root->data;
+}
+
+/* Returns the data at the end of the LinkedList. */
+void* ll_getLast(const struct LinkedList *list)
+{
+	return (list->size == 0) ? NULL : list->tail->data;
+}
+
+/* Removes the data at the front of the LinkedList and returns it. */
+void* ll_removeFirst(struct LinkedList *list)
+{
+	if (list->size == 0)
+		return NULL;
+
+	void *val = list->root->data;
+	Node *temp = list->root->next;
+	free(list->root);
+	
+	if (list->size == 1)
+	{
+		list->root = NULL;
+		list->tail = NULL;
+	}
+	else
+	{
+		temp->prev = NULL;
+		list->root = temp;
+	}
+
+	list->size--;
+	return val;
+}
+
+/* Removes the data at the end of the LinkedList and returns it. */
+void* ll_removeLast(struct LinkedList *list)
+{
+	if (list->size <= 1)
+		return ll_removeFirst(list);
+	
+	void *val = list->tail->data;
+	Node *temp = list->tail->prev;
+	free(list->tail);
+	temp->next = NULL;
+	list->tail = temp;
+	list->size--;
+
+	return val;
+}
+
+/* Removes the data at the specified position in the LinkedList. */
+void* ll_removeAt(struct LinkedList *list, const size_t index)
+{
+	if (index == 0)
+		return ll_removeFirst(list);
+	if (index == list->size - 1)
+		return ll_removeLast(list);
+	
+	Node *located = ll_find(list, index);
+	if (located == NULL)
+		return NULL;
+
+	void *val = located->data;
+	located->prev->next = located->next;
+	located->next->prev = located->prev;
+	free(located);
+	list->size--;
+	return val;
+}
+
+/* Removes the first occurrence of the data from the LinkedList, if it exists. */
+bool ll_remove(struct LinkedList *list, void *data)
+{
+	for (Node *iter = list->root; iter != NULL; iter = iter->next)
+		if (list->equals(iter->data, data))
+		{
+			if (iter == list->root)
+				ll_removeFirst(list);
+			else if (iter == list->tail)
+				ll_removeLast(list);
+			else
+			{
+				iter->prev->next = iter->next;
+				iter->next->prev = iter->prev;
+				free(iter);
+				list->size--;
+			}
+
+			return true;
+		}
+
+	return false;
+}
+
+/* De-constructor function. */
 void ll_destroy(struct LinkedList *list)
 {
 	ll_clear(list);
@@ -283,7 +240,7 @@ void ll_print(const struct LinkedList *list)
 {
 	printf_s("%s%zu%s", "List Size: ", list->size, " { ");
 
-	for (struct ll_Node *iter = list->root; iter != NULL; iter = iter->next)
+	for (Node *iter = list->root; iter != NULL; iter = iter->next)
 	{
 		printf_s("%s", list->toString(iter->data));
 		if (iter->next != NULL)
@@ -291,4 +248,31 @@ void ll_print(const struct LinkedList *list)
 	}
 
 	printf(" }\n");
+}
+
+/*
+Helper function. Locates a Node by index in the LinkedList.
+Prints an error if the index was out of bounds.
+Returns NULL if the Node cannot be located.
+*/
+static Node* ll_find(const struct LinkedList *list, const size_t index)
+{
+	if (index >= list->size)
+		ds_Error(DS_MSG_OUT_OF_BOUNDS);
+	else
+	{
+		/* Seek from the head or the tail. */
+		bool rootSeek = (double)index / list->size <= 0.5;
+		Node *iter = (rootSeek ? list->root : list->tail);
+
+		for (size_t i = rootSeek ? 0 : list->size - 1; rootSeek ? i < index : i > index;) 
+		{
+			rootSeek ? i++ : i--;
+			iter = rootSeek ? iter->next : iter->prev;
+		}
+
+		return iter;
+	}
+
+	return NULL;
 }

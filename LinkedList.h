@@ -12,6 +12,13 @@ Version: 1.9
 #include <stdbool.h>
 #include "DataStructureTools.h"
 
+/* Node structure. */
+struct ll_Node
+{
+	void *data;
+	struct ll_Node *next, *prev;
+};
+
 /* LinkedList structure. */
 struct LinkedList
 {
@@ -23,13 +30,6 @@ struct LinkedList
 	char*(*toString)(void*);
 };
 
-/* Node structure. */
-struct ll_Node
-{
-	void *data;
-	struct ll_Node *next, *prev;
-};
-
 /*
 Constructor function.
 Must pass in two function pointers.
@@ -38,25 +38,33 @@ The second function must return the String representation of the data.
 */
 struct LinkedList* LinkedList_new(bool(*equals)(void*, void*), char*(*toString)(void*));
 
-/* Adds data at the front of the LinkedList. */
-void ll_add(struct LinkedList *list, void *data);
-/* Adds data at the given index in the LinkedList. */
-void ll_addAt(struct LinkedList *list, const size_t index, void *data);
-/* Adds data to the end of the LinkedList. */
+/* Inserts data at a specific position in the LinkedList. */
+void ll_add(struct LinkedList *list, const size_t index, void *data);
+/* Inserts data at the front of the LinkedList. */
+void ll_addFirst(struct LinkedList *list, void *data);
+/* Inserts data at the end of the LinkedList. */
 void ll_addLast(struct LinkedList *list, void *data);
-/* Attempts to remove a Node with matching data, if it exists. */
-void* ll_remove(struct LinkedList *list, void *data);
-/* Removes a Node at the given index. */
-void* ll_removeAt(struct LinkedList *list, const size_t index);
-/* Removes the first Node of the LinkedList. */
-void* ll_removeFirst(struct LinkedList *list);
-/* Removes the last Node of the LinkedList. */
-void* ll_removeLast(struct LinkedList *list);
-/* Destroys every Node of the LinkedList. */
+/* Removes all data inside the LinkedList. */
 void ll_clear(struct LinkedList *list);
-/* Returns a copy of the LinkedList. */
+/* Returns a shallow copy of this LinkedList. */
 struct LinkedList* ll_clone(const struct LinkedList *list);
-/* Deconstructor function. */
+/* Returns true if the LinkedList contains the specified data. */
+bool ll_contains(const struct LinkedList *list, void *data);
+/* Returns the data at the specified position in the LinkedList. */
+void* ll_get(const struct LinkedList *list, const size_t index);
+/* Returns the data at the front of the LinkedList. */
+void* ll_getFirst(const struct LinkedList *list);
+/* Returns the data at the end of the LinkedList. */
+void* ll_getLast(const struct LinkedList *list);
+/* Removes the data at the front of the LinkedList and returns it. */
+void* ll_removeFirst(struct LinkedList *list);
+/* Removes the data at the end of the LinkedList and returns it. */
+void* ll_removeLast(struct LinkedList *list);
+/* Removes the data at the specified position in the LinkedList. */
+void* ll_removeAt(struct LinkedList *list, const size_t index);
+/* Removes the first occurrence of the data from the LinkedList, if it exists. */
+bool ll_remove(struct LinkedList *list, void *data);
+/* De-constructor function. */
 void ll_destroy(struct LinkedList *list);
-/* Prints out the LinkedList to the console window. */
+/* Prints the LinkedList to the console window. */
 void ll_print(const struct LinkedList *list);
