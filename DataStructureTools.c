@@ -10,35 +10,20 @@
 #define N_LC_KEY_CODE 110
 #define N_UC_KEY_CODE 78
 
-/* Print out an error to the Console window in color. */
+/* Print out a formatted error message to the console window. */
 void ds_Error(const char *message)
 {
-	// Attempt to change the color of the Console window.
-	bool colorFlag = false;
-	WORD prevColor;
-	CONSOLE_SCREEN_BUFFER_INFO info;
-	HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
-	if (GetConsoleScreenBufferInfo(console, &info))
-	{
-		colorFlag = true;
-		prevColor = info.wAttributes;
-		SetConsoleTextAttribute(console, DS_LIGHT_RED);
-	}
-
+	WORD prevColor = ds_changeColor(DS_LIGHT_RED);
 	fprintf_s(stderr, "\n\n%s\n\n", message);
-	// Revert the color to the previous color.
-	if (colorFlag)
-		SetConsoleTextAttribute(console, prevColor);
-
+	/* Revert back to the previous color. */
+	ds_changeColor(prevColor);
 	if (ds_YesNo(DS_MSG_EXIT))
 		exit(EXIT_FAILURE);
 }
 
-/*
-Prompt the user to press the Y or N key.
-
-Returns true if the user presses Y or false if N.
-*/
+/* Prompt the user with a yes/no message
+and return whether the user pressed Y (yes) as
+true or N (no) as false. */
 bool ds_YesNo(const char *message)
 {
 	printf_s("%s (Y/N)?\n", message);
@@ -50,4 +35,21 @@ bool ds_YesNo(const char *message)
 		&& input != N_LC_KEY_CODE && input != N_UC_KEY_CODE);
 
 	return input == Y_LC_KEY_CODE || input == Y_UC_KEY_CODE;
+}
+
+/* Changes the color of the console window and returns the previous color. */
+WORD ds_changeColor(WORD color)
+{
+	WORD prevColor = 0;
+
+	CONSOLE_SCREEN_BUFFER_INFO info;
+	HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	if (GetConsoleScreenBufferInfo(console, &info))
+	{
+		prevColor = info.wAttributes;
+		SetConsoleTextAttribute(console, color);
+	}
+
+	return prevColor;
 }

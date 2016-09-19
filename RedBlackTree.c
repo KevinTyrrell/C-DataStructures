@@ -6,6 +6,13 @@
 #define LEFT true
 #define RIGHT false
 
+#define SPACING "                                                                                "
+#define COLOR_RED 12
+#define COLOR_BLACK 240
+#define CHAR_NULL 254
+#define CHAR_POINTER_L '/'
+#define CHAR_POINTER_R '\\'
+
 /*
 Four rules:
 1) Each Node is either red or black
@@ -22,6 +29,7 @@ typedef struct RedBlackTree Tree;
 static Node* Node_new(void *key, void *value, Node *parent, bool color, bool rl_child);
 static Node* rbt_find(const Tree *tree, const Node *var, const void *key, const bool strict);
 static Node* assignChild(Node *parent, Node *child, bool which);
+static unsigned int getHeight(const Tree *tree);
 static Node* getGrandparent(const Node *child);
 static Node* getUncle(const Node *child);
 static bool isleaf(const Node *var);
@@ -35,6 +43,7 @@ struct RedBlackTree* RedBlackTree_new(int(*compare)(const void*, const void*))
 	Tree *trunk = calloc(1, sizeof(Tree));
 	if (trunk == NULL)
 		ds_Error(DS_MSG_OUT_OF_MEM);
+	trunk->compare = compare;
 	return trunk;
 }
 
@@ -42,6 +51,8 @@ struct RedBlackTree* RedBlackTree_new(int(*compare)(const void*, const void*))
 static Node* Node_new(void *key, void *value, Node *parent, bool color, bool which)
 {
 	Node *child = calloc(1, sizeof(Node));
+	if (child == NULL)
+		ds_Error(DS_MSG_OUT_OF_MEM);
 	child->key = key;
 	child->value = value;
 	child->color = color;
@@ -54,10 +65,10 @@ Inserts a Key/Value set into the tree.
 Returns the previous value associated with the key,
 or NULL if there was no previous mapping for the key.
 */
-void* rbt_put(Tree *tree, const void *key, const void *value)
+void* rbt_put(struct RedBlackTree *tree, const void *key, const void *value)
 {
 	if (tree->root == NULL)
-		tree->root = Node_new(key, value, NULL, BLACK, LEFT);
+		tree->root = Node_new((void*)key, (void*)value, NULL, BLACK, LEFT);
 	else
 	{
 		/* Locate the parent of where this Key/Value set SHOULD be. */
@@ -69,14 +80,14 @@ void* rbt_put(Tree *tree, const void *key, const void *value)
 		if (cmp == 0)
 		{
 			void *val = parent->value;
-			parent->value = value;
+			parent->value = (void*)value;
 			return val;
 		}
 
 		/* Create and insert the red node into the tree.
 		Determine if it should be a left or right child. */
-		Node *child = Node_new(key, value, parent, RED, cmp < 0);
-		insertionCase1(child);
+		Node *child = Node_new((void*)key, (void*)value, parent, RED, cmp < 0);
+		//insertionCase1(child);
 
 		/* 
 		/* Case 3: Uncle is black or NULL and Child is a left child.
@@ -115,7 +126,7 @@ static void insertionCase1(Node *child)
 {
 	Node *grandparent, *uncle;
 	
-	if (isRoot(child) || (grandparent = getGrandparent) == NULL || (uncle = getUncle(child)) == NULL)
+	if (isRoot(child) || (grandparent = getGrandparent(child)) == NULL || (uncle = getUncle(child)) == NULL)
 		return;
 	if (uncle->color == RED)
 	{
@@ -140,7 +151,7 @@ static Node* rbt_find(const Tree *tree, const Node *var, const void *key, const 
 {
 	if (var == NULL)
 		return NULL;
-	else if (!rbt_isleaf(var))
+	else if (!isleaf(var))
 	{
 		int cmp = tree->compare(key, var->key);
 		if (cmp < 0 && var->left != NULL)
@@ -148,30 +159,36 @@ static Node* rbt_find(const Tree *tree, const Node *var, const void *key, const 
 		else if (cmp > 0 && var->right != NULL)
 			return rbt_find(tree, var->right, key, strict);
 		else
-			return var;
+			return (Node*)var;
 	}
 	
-	return (strict) ? NULL : var;
+	return (strict) ? NULL : (Node*)var;
 }
 
-/* Assign a new child to this parent, based on direction.
+/* Assign a child to a specific parent.
+Inform the child of who its parent is and if it is a left or right child.
+Inform the parent of if this is its left or right child.
 Return the child that was overwritten, if one exists. NULL otherwise. */
 static Node* assignChild(Node *parent, Node *child, bool which)
 {
-	Node *old;
-	if (which == LEFT)
-	{
-		old = parent->left;
-		parent->left = child;
-	}
-	else
-	{
-		old = parent->right;
-		parent->right = child;
-	}
-	/* Tell the child if it is a right child or a left child. */
+	Node *old = NULL;
+	
+	if (parent != NULL)
+		if (which == LEFT)
+		{
+			old = parent->left;
+			parent->left = child;
+		}
+		else
+		{
+			old = parent->right;
+			parent->right = child;
+		}
 	if (child != NULL)
+	{
+		child->parent = parent;
 		child->rl_child = which;
+	}
 	return old;
 }
 
@@ -202,19 +219,95 @@ static Node* getUncle(const Node *child)
 	return (child->parent->rl_child == RIGHT) ? grandparent->left : grandparent->right;
 }
 
-static size_t getHeight(Tree *tree)
+/* Returns the height of the tree. */
+static unsigned int getHeight(const Tree *tree)
 {
-	for (struct LinkedList *list = LinkedList_new(NULL, NULL);;)
-	{
-
-	}
+	if (tree->root == NULL)
+		return 0;
 	
-	// ll_destroy(list);
-	return 0;
+	struct LinkedList *queue = LinkedList_new(NULL, NULL);	
+	ll_addLast(queue, tree->root);
+
+	unsigned int height = 0;
+
+	for (;queue->size > 0; height++)
+		/* Loop over every Node on this row. */
+		for (size_t nodes = queue->size; nodes > 0; nodes--)
+		{
+			Node *current = ll_removeFirst(queue);
+			if (current->left != NULL)
+				ll_addLast(queue, current->left);
+			if (current->right != NULL)
+				ll_addLast(queue, current->right);
+		}
+
+	ll_destroy(queue);
+	return height;
 }
 
 /* Prints the Red Black Tree out to the console window. */
-void rbt_Print(const Tree *tree)
+void rbt_print(const struct RedBlackTree *tree)
 {
+	if (tree->size == 0)
+		return;
 
+	/* We will use this to loop through the tree, row by row. */
+	struct LinkedList *queue = LinkedList_new(NULL, NULL);
+	/* Add the root to get us started. */
+	ll_addLast(queue, tree->root);
+
+	for (int height = getHeight(tree), row = 1; row <= height; row++)
+	{
+		/* Initial line spacing. */
+		printf_s("%.*s", -2 + (int)pow(2, (double)height - (double)row + 1), SPACING);
+
+		/* Enter the row of the tree. */
+		for (size_t nodes = queue->size; nodes > 0; nodes--)
+		{
+			Node *current = ll_removeFirst(queue);
+			
+			/* Change the color and print this Node's data. */
+			WORD prevColor = 0;			
+			/* NULL key means this Node was a fake that we created. */
+			if (current->key != NULL)
+				prevColor = ds_changeColor(current->color == RED ? COLOR_RED : COLOR_BLACK);
+			printf_s("%c", current->key == NULL ? CHAR_NULL : *((char*)current->key));
+			if (prevColor != 0)
+				ds_changeColor(prevColor);
+			/* If another Node comes after this one, add spaces for it. */
+			if (nodes > 1)
+				printf_s("%.*s", -1 + (int)pow(2, (double)height - (double)row + 2), SPACING);
+			
+			/* Setup the children of this Node so we know what's underneath us.
+			If we are on the bottom floor of the tree, there's not another row to be added. */
+			if (row != height)
+			{
+				/* NULL children are going to mess up the printing very badly here.
+				Create 'pretend' fake Nodes which will serve as placeholders 
+				for what COULD have existed in this slot. That way, the tree in
+				printed form will still look normal even though there gaps in it (NULL). */
+				ll_addLast(queue, current->left == NULL ? Node_new(NULL, NULL, NULL, RED, LEFT) : current->left);
+				ll_addLast(queue, current->right == NULL ? Node_new(NULL, NULL, NULL, RED, LEFT) : current->right);
+			}
+		}
+
+		/* Add the arrows / arms which direct to the children of this row. */
+		if (row != height)
+		{
+			/* Initial line spacing. */
+			printf_s("\n%.*s", -1 + (int)pow(2, (double)height - (double)row), SPACING);
+			for (size_t i = 0, sets = queue->size / 2; i < sets; i++)
+			{
+				/* Print out the  /     \  that go to the row below. */
+				printf_s("%c%.*s%c", CHAR_POINTER_L, 
+					(int)pow(2, (double)height - (double)row + 1) - 3, SPACING, CHAR_POINTER_R);
+				/* Add spacing for the next set. */
+				if (i + 1 != sets)
+					printf_s("%.*s", (int)pow(2, (double)height - (double)row + 1) + 1, SPACING);
+			}
+		}
+		printf_s("\n");
+	}
+	
+	ll_destroy(queue);
 }

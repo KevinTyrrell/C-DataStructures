@@ -311,7 +311,7 @@ static size_t hm_getSize(const struct HashMap *map, bool includingNull)
 	return map->size - (includingNull ? (map->nullKeySet != NULL ? 1 : 0) : 0);
 }
 
-/* Deconstructor function. */
+/* De-constructor function. */
 void hm_destroy(struct HashMap *map)
 {
 	// Destroy the table.

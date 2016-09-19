@@ -61,5 +61,5 @@ void hm_print(const struct HashMap *map);
 void hm_clear(struct HashMap *map);
 /* Return a copy of the HashMap. */
 struct HashMap* hm_clone(const struct HashMap *map);
-/* Deconstructor function. */
+/* De-constructor function. */
 void hm_destroy(struct HashMap *map);
