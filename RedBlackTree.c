@@ -35,7 +35,9 @@ static Node* getUncle(const Node *child);
 static bool isleaf(const Node *var);
 static bool isRoot(const Node *subject);
 
-static void insertionCase1(Node *child);
+static void insertionCase1(Tree *tree, Node *child);
+static void insertionCase2(Tree *tree, Node *child);
+static void insertionCase3(Tree *tree, Node *child);
 
 /* Constructor function. */
 struct RedBlackTree* RedBlackTree_new(int(*compare)(const void*, const void*))
@@ -87,29 +89,9 @@ void* rbt_put(struct RedBlackTree *tree, const void *key, const void *value)
 		/* Create and insert the red node into the tree.
 		Determine if it should be a left or right child. */
 		Node *child = Node_new((void*)key, (void*)value, parent, RED, cmp < 0);
-		//insertionCase1(child);
 
-		/* 
-		/* Case 3: Uncle is black or NULL and Child is a left child.
-			Parent takes the place of Grandparent while Grandparent becomes
-			the right child of Parent and inherits Parent's	previous right
-			child as his new left child. Parent becomes black and Grandparent red.
-		if ((uncle == NULL || uncle->color == BLACK) && child->rl_child == LEFT)
-		{
-			/* Temporary variable as we are doing swapping.
-			Node *temp = parent->right;
-
-			/* Parent becomes the new 'grandparent'.
-			if (isRoot(grandparent))
-				tree->root = parent;
-			else
-				assignChild(grandparent->parent, parent, grandparent->rl_child);
-
-			assignChild(parent, grandparent, RIGHT);
-			assignChild(grandparent, temp, LEFT);
-			parent->color = BLACK;
-			grandparent->color = RED;
-		}*/
+		/* Fix up the Tree if it's in violation. */
+		insertionCase1(tree, child);
 	}
 
 	tree->size++;
@@ -122,22 +104,77 @@ Re-color the parent and uncle to black.
 If the grandparent is not the root, re-color him to red.
 Recursively call cases on the grandparent.
 */
-static void insertionCase1(Node *child)
+static void insertionCase1(Tree *tree, Node *child)
 {
-	Node *grandparent, *uncle;
-	
-	if (isRoot(child) || (grandparent = getGrandparent(child)) == NULL || (uncle = getUncle(child)) == NULL)
-		return;
-	if (uncle->color == RED)
+	Node *parent = child->parent, *uncle = getUncle(child),
+		*grandparent = getGrandparent(child);
+
+	/* Violation only occurs when child and parent are both red. */
+	if (child->color == RED && child->parent->color == RED)
 	{
-		uncle->color = BLACK;
-		child->parent->color = BLACK;
-		if (!isRoot(grandparent))
-			grandparent->color = RED;
-		insertionCase1(grandparent);
+		printf_s("\nBefore repair:\n");
+		rbt_print(tree);
+
+		if (uncle != NULL && uncle->color == RED)
+		{
+			uncle->color = BLACK;
+			parent->color = BLACK;
+			if (!isRoot(grandparent))
+				grandparent->color = RED;
+			insertionCase1(tree, grandparent);
+		}
+		else
+			insertionCase2(tree, child);
 	}
-	//else
-		//insertionCase2(child);
+}
+
+/*
+Case 2: Uncle is black. Two-tree rotations needed.
+Grandparent becomes the 
+
+
+Recursively call cases on the grandparent.
+*/
+static void insertionCase2(Tree *tree, Node *child)
+{
+	Node *parent = child->parent, *uncle = getUncle(child),
+		*grandparent = getGrandparent(child);
+	
+	if ((uncle == NULL || uncle->color == BLACK) && parent->rl_child != child->rl_child)
+	{
+		Node *temp = (parent->rl_child == LEFT) ? child->left : child->right;
+		assignChild(grandparent, child, parent->rl_child);
+		assignChild(child, parent, parent->rl_child);
+		assignChild(child, temp, !parent->rl_child);
+		insertionCase3(tree, parent);
+	}
+	else
+		insertionCase3(tree, child);
+}
+
+static void insertionCase3(Tree *tree, Node *child)
+{
+	Node *parent = child->parent, *uncle = getUncle(child),
+		*grandparent = getGrandparent(child);
+
+	if ((uncle == NULL || uncle->color == BLACK) && child->rl_child == parent->rl_child)
+	{
+		bool direction = parent->rl_child, rootChanged;
+		/* If there is more of the tree above us, connect it to parent. */
+		if ((rootChanged = isRoot(grandparent)) == false)
+			assignChild(grandparent->parent, parent, grandparent->rl_child);
+		Node *temp = (direction == LEFT) ? parent->right : parent->left;
+		assignChild(parent, grandparent, !direction);
+		assignChild(grandparent, temp, direction);
+		grandparent->color = RED;
+		parent->color = BLACK;
+		/* It's possible we messed up the root, fix it. */
+		if (rootChanged)
+		{
+			tree->root = parent;
+			tree->root->parent = NULL;
+		}
+	}
 }
 
 /* 
@@ -245,6 +282,33 @@ static unsigned int getHeight(const Tree *tree)
 	return height;
 }
 
+/* De-constructor function. */
+void rbt_destroy(struct RedBlackTree *tree)
+{
+	if (tree->size > 0)
+	{
+		struct LinkedList *queue = LinkedList_new(NULL, NULL);
+		ll_addLast(queue, tree->root);
+
+		while (queue->size > 0)
+			/* Go through all the Nodes on this row. */
+			for (size_t nodes = queue->size; nodes > 0; nodes--)
+			{
+				/* Prepare the next row. */
+				Node *current = ll_removeFirst(queue);
+				if (current->left != NULL)
+					ll_addLast(queue, current->left);
+				if (current->right != NULL)
+					ll_addLast(queue, current->right);
+				free(current);
+			}
+
+		ll_destroy(queue);
+	}
+	
+	free(tree);
+}
+
 /* Prints the Red Black Tree out to the console window. */
 void rbt_print(const struct RedBlackTree *tree)
 {
@@ -255,6 +319,7 @@ void rbt_print(const struct RedBlackTree *tree)
 	struct LinkedList *queue = LinkedList_new(NULL, NULL);
 	/* Add the root to get us started. */
 	ll_addLast(queue, tree->root);
+	printf_s("%s%zu\n", "Red Black Tree - Size: ", tree->size);
 
 	for (int height = getHeight(tree), row = 1; row <= height; row++)
 	{

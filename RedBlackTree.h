@@ -36,3 +36,5 @@ struct RedBlackTree* RedBlackTree_new(int(*compare)(const void*, const void*));
 void* rbt_put(struct RedBlackTree *tree, const void *key, const void *value);
 /* Prints the Red Black Tree out to the console window. */
 void rbt_print(const struct RedBlackTree *tree);
+/* De-constructor function. */
+void rbt_destroy(struct RedBlackTree *tree);
