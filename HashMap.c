@@ -207,7 +207,7 @@ void* hm_remove(struct HashMap *map, void *key)
 	return NULL;
 }
 
-/* Check if a given element in the HashMap exists. */
+/* Returns true if the HashMap contains the specified key. */
 bool hm_contains(struct HashMap *map, void *key)
 {
 	return hm_find(map, key) != NULL;

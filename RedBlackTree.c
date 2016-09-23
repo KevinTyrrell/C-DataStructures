@@ -106,46 +106,49 @@ Recursively call cases on the grandparent.
 */
 static void insertionCase1(Tree *tree, Node *child)
 {
-	Node *parent = child->parent, *uncle = getUncle(child),
-		*grandparent = getGrandparent(child);
+	Node *parent = child->parent, *uncle, *grandparent;
 
 	/* Violation only occurs when child and parent are both red. */
-	if (child->color == RED && child->parent->color == RED)
-	{
-		printf_s("\nBefore repair:\n");
-		rbt_print(tree);
-
-		if (uncle != NULL && uncle->color == RED)
+	if (child->color == RED && parent->color == RED)
+		if ((uncle = getUncle(child)) != NULL && uncle->color == RED)
 		{
+			grandparent = getGrandparent(child);
 			uncle->color = BLACK;
 			parent->color = BLACK;
 			if (!isRoot(grandparent))
 				grandparent->color = RED;
+			/* Re-check this case further up the tree. */
 			insertionCase1(tree, grandparent);
 		}
 		else
 			insertionCase2(tree, child);
-	}
 }
 
 /*
+Case 1: Uncle is red. Re-color key Nodes.
+Re-color the parent and uncle to black.
+If the grandparent is not the root, re-color him to red.
+Recursively call cases on the grandparent.
+*/
+/*
 Case 2: Uncle is black. Two-tree rotations needed.
-Grandparent becomes the 
+Child
 
 
 Recursively call cases on the grandparent.
 */
 static void insertionCase2(Tree *tree, Node *child)
 {
-	Node *parent = child->parent, *uncle = getUncle(child),
-		*grandparent = getGrandparent(child);
+	Node *parent = child->parent, *uncle = getUncle(child), *grandparent;
 	
 	if ((uncle == NULL || uncle->color == BLACK) && parent->rl_child != child->rl_child)
 	{
-		Node *temp = (parent->rl_child == LEFT) ? child->left : child->right;
-		assignChild(grandparent, child, parent->rl_child);
-		assignChild(child, parent, parent->rl_child);
-		assignChild(child, temp, !parent->rl_child);
+		grandparent = getGrandparent(child);
+		bool direction = parent->rl_child;
+		Node *temp = (direction == LEFT) ? child->left : child->right;
+		assignChild(grandparent, child, direction);
+		assignChild(child, parent, direction);
+		assignChild(child, temp, !direction);
 		insertionCase3(tree, parent);
 	}
 	else
@@ -155,10 +158,11 @@ static void insertionCase2(Tree *tree, Node *child)
 static void insertionCase3(Tree *tree, Node *child)
 {
 	Node *parent = child->parent, *uncle = getUncle(child),
-		*grandparent = getGrandparent(child);
+		*grandparent;
 
 	if ((uncle == NULL || uncle->color == BLACK) && child->rl_child == parent->rl_child)
 	{
+		grandparent = getGrandparent(child);
 		bool direction = parent->rl_child, rootChanged;
 		/* If there is more of the tree above us, connect it to parent. */
 		if ((rootChanged = isRoot(grandparent)) == false)
@@ -175,6 +179,19 @@ static void insertionCase3(Tree *tree, Node *child)
 			tree->root->parent = NULL;
 		}
 	}
+}
+
+/* Returns the value associated with the key inside the tree. NULL if one doesn't exist. */
+void* rbt_get(struct RedBlackTree *tree, const void *key)
+{
+	Node *keyset = rbt_find(tree, tree->root, key, true);
+	return (keyset != NULL) ? keyset->value : NULL;
+}
+
+/* Returns true if the tree contains the specified key. */
+bool rbt_contains(struct RedBlackTree *tree, const void *key)
+{
+	return rbt_find(tree, tree->root, key, true) != NULL;
 }
 
 /* 
@@ -211,6 +228,7 @@ static Node* assignChild(Node *parent, Node *child, bool which)
 	Node *old = NULL;
 	
 	if (parent != NULL)
+	{
 		if (which == LEFT)
 		{
 			old = parent->left;
@@ -221,8 +239,18 @@ static Node* assignChild(Node *parent, Node *child, bool which)
 			old = parent->right;
 			parent->right = child;
 		}
+		/* Inform the overwritten child that he no longer has a parent. */
+		if (old != NULL)
+			old->parent = NULL;
+	}
 	if (child != NULL)
 	{
+		/* Inform the previous parent that he no longer owns this child. */
+		if (child->parent != NULL)
+			if (child->rl_child == LEFT)
+				child->parent->left = NULL;
+			else
+				child->parent->right = NULL;
 		child->parent = parent;
 		child->rl_child = which;
 	}

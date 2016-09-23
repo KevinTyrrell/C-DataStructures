@@ -34,7 +34,11 @@ struct rbt_Node
 struct RedBlackTree* RedBlackTree_new(int(*compare)(const void*, const void*));
 /* Places a key/value pair into the tree. */
 void* rbt_put(struct RedBlackTree *tree, const void *key, const void *value);
+/* Returns the value associated with the key inside the tree. NULL if one doesn't exist. */
+void* rbt_get(struct RedBlackTree *tree, const void *key);
 /* Prints the Red Black Tree out to the console window. */
 void rbt_print(const struct RedBlackTree *tree);
 /* De-constructor function. */
 void rbt_destroy(struct RedBlackTree *tree);
+/* Returns true if the tree contains the specified key. */
+bool rbt_contains(struct RedBlackTree *tree, const void *key);

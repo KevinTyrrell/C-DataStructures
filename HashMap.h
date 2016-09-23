@@ -51,7 +51,7 @@ void hm_put(struct HashMap *map, void *key, void *value);
 void* hm_get(const struct HashMap *map, const void *key);
 /* Removes a Key/Value pair from the HashMap when provided with a key. */
 void* hm_remove(struct HashMap *map, void *key);
-/* Check if a given element in the HashMap exists. */
+/* Returns true if the HashMap contains the specified key. */
 bool hm_contains(struct HashMap *map, void *key);
 /* Return an array with all Keys/Values currently in the HashMap. */
 struct hm_Node** hm_KeySet(const struct HashMap *map);
