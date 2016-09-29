@@ -7,10 +7,11 @@ Version: 1.9
 
 #pragma once
 
+#include "DataStructureTools.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include "DataStructureTools.h"
+#include <time.h>
 
 /* Node structure. */
 struct ll_Node
@@ -64,6 +65,8 @@ void* ll_removeLast(struct LinkedList *list);
 void* ll_removeAt(struct LinkedList *list, const size_t index);
 /* Removes the first occurrence of the data from the LinkedList, if it exists. */
 bool ll_remove(struct LinkedList *list, void *data);
+/* Randomizes the position of all elements inside the LinkedList. */
+void ll_shuffle(struct LinkedList *list);
 /* De-constructor function. */
 void ll_destroy(struct LinkedList *list);
 /* Prints the LinkedList to the console window. */

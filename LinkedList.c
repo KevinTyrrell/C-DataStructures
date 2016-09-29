@@ -223,6 +223,31 @@ bool ll_remove(struct LinkedList *list, void *data)
 	return false;
 }
 
+/* Randomizes the position of all elements inside the LinkedList. */
+void ll_shuffle(struct LinkedList *list)
+{
+	if (list->size <= 1)
+		return;
+
+	srand((unsigned int)time(NULL));
+	rand();
+	rand();
+
+	Node *end = list->tail;
+	for (size_t i = list->size; i > 1; i--)
+	{
+		/* Generate a massive random number. */
+		unsigned long long random =
+			(((unsigned long long)rand() << 0) & 0x00000000FFFFFFFFull) |
+			(((unsigned long long)rand() << 32) & 0xFFFFFFFF00000000ull);
+		Node *swap = ll_find(list, (size_t)(random % i));
+		void *temp = swap->data;
+		swap->data = end->data;
+		end->data = temp;
+		end = end->prev;
+	}
+}
+
 /* De-constructor function. */
 void ll_destroy(struct LinkedList *list)
 {

@@ -29,7 +29,6 @@ typedef struct RedBlackTree Tree;
 static Node* Node_new(void *key, void *value, Node *parent, bool color, bool rl_child);
 static Node* rbt_find(const Tree *tree, const Node *var, const void *key, const bool strict);
 static Node* assignChild(Node *parent, Node *child, bool which);
-static unsigned int getHeight(const Tree *tree);
 static Node* getGrandparent(const Node *child);
 static Node* getUncle(const Node *child);
 static bool isleaf(const Node *var);
@@ -38,6 +37,8 @@ static bool isRoot(const Node *subject);
 static void insertionCase1(Tree *tree, Node *child);
 static void insertionCase2(Tree *tree, Node *child);
 static void insertionCase3(Tree *tree, Node *child);
+
+static unsigned int getHeight(const struct RedBlackTree *tree);
 
 /* Constructor function. */
 struct RedBlackTree* RedBlackTree_new(int(*compare)(const void*, const void*))
@@ -125,17 +126,11 @@ static void insertionCase1(Tree *tree, Node *child)
 }
 
 /*
-Case 1: Uncle is red. Re-color key Nodes.
-Re-color the parent and uncle to black.
-If the grandparent is not the root, re-color him to red.
-Recursively call cases on the grandparent.
-*/
-/*
-Case 2: Uncle is black. Two-tree rotations needed.
-Child
-
-
-Recursively call cases on the grandparent.
+Case 2: Uncle is black. Child is either a left child of a
+right parent or a right child of a left parent.
+Child becomes the parent of parent and also inherits
+the parent's old other child.
+Proceed to case 3 with the parent (who is now a child).
 */
 static void insertionCase2(Tree *tree, Node *child)
 {
@@ -155,6 +150,11 @@ static void insertionCase2(Tree *tree, Node *child)
 		insertionCase3(tree, child);
 }
 
+/*
+Case 3: Uncle is black. Child is either a left child of a
+left parent or a right child of a right parent.
+Right or left rotation is performed. 
+*/
 static void insertionCase3(Tree *tree, Node *child)
 {
 	Node *parent = child->parent, *uncle = getUncle(child),
@@ -285,7 +285,7 @@ static Node* getUncle(const Node *child)
 }
 
 /* Returns the height of the tree. */
-static unsigned int getHeight(const Tree *tree)
+static unsigned int getHeight(const struct RedBlackTree *tree)
 {
 	if (tree->root == NULL)
 		return 0;
