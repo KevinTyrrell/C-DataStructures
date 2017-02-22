@@ -105,6 +105,11 @@ List* ll_clone(const struct LinkedList *list)
 	return copy;
 }
 
+bool ll_isEmpty(const struct LinkedList * list)
+{
+	return list->size == 0;
+}
+
 /* Returns true if the LinkedList contains the specified data. */
 bool ll_contains(const struct LinkedList *list, void *data)
 {

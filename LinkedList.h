@@ -2,7 +2,7 @@
 /*
 Author: Kevin Tyrrell
 Date: 7/21/2016
-Version: 1.9
+Version: 2.0
 */
 
 #pragma once
@@ -49,6 +49,8 @@ void ll_addLast(struct LinkedList *list, void *data);
 void ll_clear(struct LinkedList *list);
 /* Returns a shallow copy of this LinkedList. */
 struct LinkedList* ll_clone(const struct LinkedList *list);
+/* Returns true if the LinkedList is empty. */
+bool ll_isEmpty(const struct LinkedList *list);
 /* Returns true if the LinkedList contains the specified data. */
 bool ll_contains(const struct LinkedList *list, void *data);
 /* Returns the data at the specified position in the LinkedList. */
