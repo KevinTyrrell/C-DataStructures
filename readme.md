@@ -58,7 +58,7 @@ int main()
 #### HashMap
 
 
-```
+```c
 #include "HashMap.h"
 
 #include <time.h>
