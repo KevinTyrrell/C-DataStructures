@@ -44,20 +44,28 @@ struct rbt_Node
 	struct rbt_Node *parent, *left, *right;
 };
 
-/* Constructor function. */
-struct RedBlackTree* RedBlackTree_new(int(*compare)(const void*, const void*), char*(*toString)(void*));
+/* ~~~~~ Constructors ~~~~~ */
+
+struct RedBlackTree* RedBlackTree_new(int(*compare)(const void* const, const void* const), char*(*toString)(const void* const));
+
+/* ~~~~~ Accessors ~~~~~ */
+
+/* Returns the value associated with the key inside the tree. NULL if one doesn't exist. */
+void* rbt_get(const struct RedBlackTree* const tree, const void* const key);
+/* Returns true if the tree contains the specified key. */
+bool rbt_contains(const struct RedBlackTree* const tree, const void* const key);
+/* Returns tree if the Tree is empty. */
+bool rbt_isEmpty(const struct RedBlackTree* const tree);
+/* Returns the vertical height of the tree. */
+unsigned int rbt_height(const struct RedBlackTree* const tree);
+/* Prints the Red Black Tree out to the console window. */
+void rbt_print(const struct RedBlackTree* const tree);
+
+/* ~~~~~ Mutators ~~~~~ */
 
 /* Places a Key/Value pair into the tree. */
 void rbt_put(struct RedBlackTree* const tree, const void* const key, const void* const value);
-/* Returns the value associated with the key inside the tree. NULL if one doesn't exist. */
-void* rbt_get(const struct RedBlackTree* const tree, const void* const key);
-/* Returns tree if the Tree is empty. */
-bool rbt_isEmpty(const struct RedBlackTree* const tree);
-/* Returns true if the tree contains the specified key. */
-bool rbt_contains(const struct RedBlackTree* const tree, const void* const key);
-/* Returns the vertical height of the tree. */
-unsigned int getHeight(const struct RedBlackTree* const tree);
-/* Prints the Red Black Tree out to the console window. */
-void rbt_print(const struct RedBlackTree* const tree);
-/* De-constructor function. */
+
+/* ~~~~~ De-constructors ~~~~~ */
+
 void rbt_destroy(const struct RedBlackTree* const tree);

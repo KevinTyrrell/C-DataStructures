@@ -10,9 +10,9 @@
 #define N_LC_KEY_CODE 110
 #define N_UC_KEY_CODE 78
 
-#define DS_ERR_DEALLOCATE "Cannot de-allocate blocks that were not reported to have been allocated!\n"
-#define DS_ERR_NULLPTR "Unable to perform operation on NULL pointer!\n"
-#define DS_ERR_OUT_OF_MEM "Not enough memory to allocate for this variable!"
+#define DS_MSG_DEALLOCATE "Cannot de-allocate blocks that were not reported to have been allocated!\n"
+#define DS_MSG_OUT_OF_MEM "Not enough memory to allocate for this variable!"
+
 #define DS_EXIT "Exit Runtime"
 
 /* Track memory usage in order to make sure we free all allocated memory. */
@@ -67,7 +67,7 @@ void * ds_malloc(const size_t size)
 {
 	const void* const block = malloc(size);
 	if (block == NULL)
-		ds_error(DS_ERR_OUT_OF_MEM);
+		ds_error(DS_MSG_OUT_OF_MEM);
 	MEM_CURRENT_ALLOCATIONS++;
 	MEM_TOTAL_ALLOCATIONS++;
 	MEM_BLOCKS_ALLOCATED += size;
@@ -79,7 +79,7 @@ void * ds_calloc(const size_t nitems, const size_t size)
 {
 	const void* const block = calloc(nitems, size);
 	if (block == NULL)
-		ds_error(DS_ERR_OUT_OF_MEM);
+		ds_error(DS_MSG_OUT_OF_MEM);
 	MEM_CURRENT_ALLOCATIONS++;
 	MEM_TOTAL_ALLOCATIONS++;
 	MEM_BLOCKS_ALLOCATED += size * nitems;
@@ -91,7 +91,7 @@ void * ds_realloc(const void * ptr, const size_t oldSize, const size_t newSize)
 {
 	const void* const block = realloc(ptr, newSize);
 	if (block == NULL)
-		ds_error(DS_ERR_OUT_OF_MEM);
+		ds_error(DS_MSG_OUT_OF_MEM);
 	MEM_BLOCKS_ALLOCATED += newSize;
 	MEM_BLOCKS_ALLOCATED -= oldSize;
 	return block;
@@ -102,13 +102,13 @@ void ds_free(void * ptr, const size_t size)
 {
 	if (ptr == NULL)
 	{
-		ds_error(DS_ERR_NULLPTR);
+		ds_error(DS_MSG_NULL_PTR);
 		return;
 	}
 	free(ptr);
 	if (MEM_CURRENT_ALLOCATIONS == 0 || MEM_BLOCKS_ALLOCATED < size)
 	{
-		ds_error(DS_ERR_DEALLOCATE);
+		ds_error(DS_MSG_DEALLOCATE);
 		return;
 	}
 	MEM_CURRENT_ALLOCATIONS--;

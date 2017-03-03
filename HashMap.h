@@ -10,7 +10,6 @@ Version: 2.0
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "Tools.h"
@@ -25,9 +24,9 @@ struct HashMap
 
 	/* Function pointers.
 	These are given to the HashMap to allow it to handle unknown data types. */
-	bool(*equals)(void*, void*);
-	char*(*toString)(void*);
-	unsigned int(*hash)(void*);
+	bool(*equals)(const void* const, const void* const);
+	char*(*toString)(const void* const);
+	unsigned int(*hash)(const void* const);
 };
 
 /* KeySet for Key/Value entries. */

@@ -7,6 +7,8 @@
 #include <stdbool.h>
 
 #define DS_MSG_OUT_OF_BOUNDS "Requested index was out of bounds!"
+#define DS_MSG_NULL_PTR "Unable to perform operation on NULL pointer!"
+#define DS_MSG_EMPTY "Cannot perform this operation while the container is empty!"
 
 /* Print out a formatted error message to the console window. */
 void ds_error(const char* const message);

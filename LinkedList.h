@@ -11,13 +11,6 @@ Version: 2.0
 
 #include "Tools.h"
 
-/* Node structure. */
-struct ll_Node
-{
-	void *data;
-	struct ll_Node *next, *prev;
-};
-
 /* LinkedList structure. */
 struct LinkedList
 {
@@ -27,6 +20,13 @@ struct LinkedList
 	/* Pointer functions */
 	bool(*equals)(void*, void*);
 	char*(*toString)(void*);
+};
+
+/* Node structure. */
+struct ll_Node
+{
+	void *data;
+	struct ll_Node *next, *prev;
 };
 
 /* ~~~~~ Constructors ~~~~~ */
