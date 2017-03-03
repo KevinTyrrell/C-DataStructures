@@ -14,6 +14,9 @@ The following are static libraries for use in my C coding projects. Ω, Θ, and 
 
 ## Example Uses:
 
+
+#### LinkedList
+
 ```c
 #include "LinkedList.h"
 #include <math.h>
@@ -47,5 +50,49 @@ int main()
 
 	// Must be called before the LinkedList falls out of scope.
 	ll_destroy(queue);
+}
+```
+
+
+
+#### HashMap
+
+
+```
+#include "HashMap.h"
+
+#include <time.h>
+
+unsigned int hash(void* var)
+{
+	char v = *(char*)var;
+	unsigned int h = 4243;
+	return (h << 5) + h * v;
+}
+
+bool equals(void* v1, void* v2)
+{
+	return *(char*)v1 == *(char*)v2;
+}
+
+int main()
+{
+	const struct HashMap *map = HashMap_new(16, &hash, &equals, NULL);
+	srand(5);
+	
+	for (char i = '!'; i < '~'; i++)
+	{
+		char *key = malloc(sizeof(char));
+		*key = i;
+		int *value = malloc(sizeof(int));
+		*value = rand();
+		hm_put(map, key, value);
+	}
+	
+	char search = '$';
+	char *located = hm_get(map, &search);
+	printf_s("Found: %d\n", *located);
+
+	hm_destroy(map);
 }
 ```
