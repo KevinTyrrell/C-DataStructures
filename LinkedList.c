@@ -1,4 +1,4 @@
-
+﻿
 #include "LinkedList.h"
 
 /* Local typedef for convenience. */
@@ -27,23 +27,35 @@ Node* Node_new(const void* const data)
 	return node;
 }
 
-/* Returns the data at the front of the LinkedList. */
+/* 
+Returns the data at the front of the LinkedList.
+Ω(1), Θ(1), O(1)
+*/
 void* ll_front(const struct LinkedList* const list)
 {
 	return list->root->data;
 }
 
-/* Returns the data at the end of the LinkedList. */
+/*
+Returns the data at the end of the LinkedList.
+Ω(1), Θ(1), O(1)
+*/
 void* ll_back(const struct LinkedList* const list)
 {
 	return list->tail->data;
 }
 
-/* Returns the data at the specified position in the LinkedList. */
+/*
+Returns the data at the specified position in the LinkedList.
+Ω(n), Θ(n), O(n)
+*/
 void* ll_at(const struct LinkedList* const list, const size_t index)
 {
 	if (ll_empty(list))
+	{
+		ds_error(DS_MSG_EMPTY);
 		return NULL;
+	}
 	if (index == 0)
 		return ll_front(list);
 	if (index == list->size - 1)
@@ -51,7 +63,10 @@ void* ll_at(const struct LinkedList* const list, const size_t index)
 	return ll_search(list, index)->data;
 }
 
-/* Returns true if the LinkedList contains the specified data. */
+/*
+Returns true if the LinkedList contains the specified data.
+Ω(n), Θ(n), O(n)
+*/
 bool ll_contains(const struct LinkedList* const list, const void* const data)
 {
 	for (const Node *iter = list->root; iter != NULL; iter = iter->next)
@@ -60,13 +75,19 @@ bool ll_contains(const struct LinkedList* const list, const void* const data)
 	return false;
 }
 
-/* Returns true if the LinkedList is empty. */
+/* 
+Returns true if the LinkedList is empty.
+Ω(1), Θ(1), O(1)
+*/
 bool ll_empty(const struct LinkedList* const list)
 {
 	return list->size == 0;
 }
 
-/* Returns a shallow copy of the given LinkedList. */
+/*
+Returns a shallow copy of the given LinkedList.
+Ω(n), Θ(n), O(n)
+*/
 struct LinkedList* ll_clone(const struct LinkedList* const list)
 {
 	const List* const copy = LinkedList_new(list->equals, list->toString);
@@ -77,9 +98,7 @@ struct LinkedList* ll_clone(const struct LinkedList* const list)
 
 /*
 Prints out the LinkedList to the console window.
-
-O(n) complexity.
-Attempts to cast the void* data into char*.
+Ω(n), Θ(n), O(n)
 */
 void ll_print(const struct LinkedList* const list)
 {
@@ -95,72 +114,92 @@ void ll_print(const struct LinkedList* const list)
 	printf(" }\n");
 }
 
-/* Inserts data at the front of the LinkedList. */
+/*
+Inserts data at the front of the LinkedList.
+Ω(1), Θ(1), O(1)
+*/
 void ll_push_front(struct LinkedList* const list, const void* const data)
 {
 	Node* const insert = Node_new(data);
 
 	if (ll_empty(list))
-		list->tail = insert;
-	else
 	{
 		insert->next = list->root;
 		list->root->prev = insert;
 	}
+	else
+		list->tail = insert;
 
 	list->root = insert;
 	list->size++;
 }
 
-/* Inserts data at the end of the LinkedList. */
+/*
+Inserts data at the end of the LinkedList.
+Ω(1), Θ(1), O(1)
+*/
 void ll_push_back(struct LinkedList* const list, const void* const data)
 {
 	if (ll_empty(list))
-		ll_push_front(list, data);
-	else
 	{
-		Node* const insert = Node_new(data);
-		insert->prev = list->tail;
-		list->tail->next = insert;
-		list->tail = insert;
-		list->size++;
+		ll_push_front(list, data);
+		return;
 	}
+
+	Node* const insert = Node_new(data);
+	insert->prev = list->tail;
+	list->tail->next = insert;
+	list->tail = insert;
+	list->size++;
 }
 
-/* Overwrites a value in the LinkedList at a given index. */
+/* 
+Overwrites a value in the LinkedList at a given index.
+Ω(n), Θ(n), O(n)
+*/
 void ll_assign(const struct LinkedList* const list, const size_t index, const void * const data)
 {
 	Node* const located = ll_search(list, index);
 	located->data = data;
 }
 
-/* Inserts data at a specific position in the LinkedList. */
+/*
+Inserts data at a specific position in the LinkedList.
+Ω(1), Θ(n), O(n)
+*/
 void ll_insert(struct LinkedList* const list, const size_t index, const void* const data)
 {
+	bool temp = true;
 	if (ll_empty(list) || index == 0)
 		ll_push_front(list, data);
 	else if (index == list->size)
 		ll_push_back(list, data);
-	else
+	else temp = false;
+	if (temp) return;
+
+	Node* const located = ll_search(list, index);
+	if (located != NULL)
 	{
-		Node* const located = ll_search(list, index);
-		if (located != NULL)
-		{
-			Node* const insert = Node_new(data);
-			located->prev->next = insert;
-			insert->prev = located->prev;
-			insert->next = located;
-			located->prev = insert;
-			list->size++;
-		}
+		Node* const insert = Node_new(data);
+		located->prev->next = insert;
+		insert->prev = located->prev;
+		insert->next = located;
+		located->prev = insert;
+		list->size++;
 	}
 }
 
-/* Removes the data at the front of the LinkedList and returns it. */
+/*
+Removes the data at the front of the LinkedList and returns it.
+Ω(1), Θ(1), O(1)
+*/
 void ll_pop_front(struct LinkedList* const list)
 {
 	if (ll_empty(list))
+	{
+		ds_error(DS_MSG_EMPTY);
 		return;
+	}
 
 	const Node* const root = list->root;
 	if (list->size == 1)
@@ -179,11 +218,17 @@ void ll_pop_front(struct LinkedList* const list)
 	list->size--;
 }
 
-/* Removes the data at the end of the LinkedList and returns it. */
+/*
+Removes the data at the end of the LinkedList and returns it.
+Ω(1), Θ(1), O(1)
+*/
 void ll_pop_back(struct LinkedList* const list)
 {
 	if (ll_empty(list))
+	{
+		ds_error(DS_MSG_EMPTY);
 		return;
+	}
 
 	const Node* const tail = list->tail;
 	if (list->size == 1)
@@ -202,7 +247,10 @@ void ll_pop_back(struct LinkedList* const list)
 	list->size--;
 }
 
-/* Removes the first occurrence of the data from the LinkedList, if it exists. */
+/*
+Removes the first occurrence of the data from the LinkedList, if it exists.
+Ω(1), Θ(1), O(1)
+*/
 bool ll_remove(struct LinkedList* const list, const void* const data)
 {
 	for (const Node *iter = list->root; iter != NULL; iter = iter->next)
@@ -226,11 +274,14 @@ bool ll_remove(struct LinkedList* const list, const void* const data)
 	return false;
 }
 
-/* Removes the data at the specified position in the LinkedList. */
+/*
+Removes the data at the specified position in the LinkedList.
+Ω(1), Θ(n), O(n)
+*/
 void ll_erase(struct LinkedList* const list, const size_t index)
 {
 	if (ll_empty(list))
-		return;
+		ds_error(DS_MSG_EMPTY);
 	if (index == 0)
 		ll_pop_front(list);
 	else if (index == list->size - 1)
@@ -261,7 +312,10 @@ void ll_clear(struct LinkedList* const list)
 	list->size = 0;
 }
 
-/* Randomizes the position of all elements inside the LinkedList. */
+/* 
+Randomizes the position of all elements inside the LinkedList.
+Ω(n^2), Θ(n^2), O(n^2)
+*/
 void ll_shuffle(const struct LinkedList* const list)
 {
 	if (list->size <= 1)
@@ -286,7 +340,10 @@ void ll_shuffle(const struct LinkedList* const list)
 	}
 }
 
-/* De-constructor function. */
+/*
+De-constructor function.
+Ω(n), Θ(n), O(n)
+*/
 void ll_destroy(const struct LinkedList* const list)
 {
 	ll_clear(list);
@@ -297,6 +354,7 @@ void ll_destroy(const struct LinkedList* const list)
 Helper function. Locates a Node by index in the LinkedList.
 Prints an error if the index was out of bounds.
 Returns NULL if the Node cannot be located.
+Ω(n), Θ(n), O(n)
 */
 Node* ll_search(const struct LinkedList* const list, const size_t index)
 {

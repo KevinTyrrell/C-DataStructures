@@ -79,9 +79,3 @@ void hm_clear(struct HashMap* const map);
 
 void hm_destroy(const struct HashMap* const map);
 void hm_KeySet_destroy(const struct hm_KeySet* const set);
-
-
-
-
-
-
