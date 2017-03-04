@@ -15,7 +15,7 @@ struct Vector * Vector_new(int(*compare)(const void *, const void *), char*(*toS
 	Vector* const vect = ds_calloc(1, sizeof(Vector));
 	vect->table = ds_calloc(DEFAULT_INITIAL_CAPACITY, sizeof(void*));
 	vect->capacity = DEFAULT_INITIAL_CAPACITY;
-	const unsigned int middle = DEFAULT_INITIAL_CAPACITY / 2;
+	const unsigned int middle = (DEFAULT_INITIAL_CAPACITY - 1) / 2;
 	vect->start = middle;
 	vect->end = middle;
 	vect->compare = compare;
@@ -121,6 +121,94 @@ void vect_print(const Vector * const vect)
 }
 
 /*
+Prints out the contents of the Vector (including NULL indexes) using the toString function.
+Ω(n), Θ(n), O(n)
+*/
+void vect_debug_print(const Vector* const vect)
+{
+	/* Determine how many rows we will need to print and go through each one. */
+	const unsigned int INDEXES_PER_ROW = 10;
+	/* Color that the array's elements will be printed as. */
+	const WORD elementColor = 13;
+	const unsigned int rows = (unsigned int)ceil(vect->capacity / (double)INDEXES_PER_ROW);
+	
+	unsigned int iter = 0;
+	for (unsigned int i = 0; i < rows; i++)
+	{
+		printf_s("     ");
+		const WORD oldColor = ds_changeColor(elementColor);
+		for (unsigned int h = 0; h < INDEXES_PER_ROW && iter < vect->capacity; h++)
+		{
+			const void* const value = vect->table[iter++];
+			printf_s(" %.1s  ", value != NULL ? vect->toString(value) : ".");
+		}
+		ds_changeColor(oldColor);
+
+		printf_s("\nR%u   ", i % 10);
+		/* Print indexes at the bottom of the row to indicate where we are in the array. */
+		for (unsigned int h = 0; h < INDEXES_PER_ROW; h++)
+			printf_s("[%u] ", h % 10);
+		printf_s("\n");
+	}
+}
+
+/*  */
+void vect_assign(const Vector * const vect, const unsigned int index, const void * const data)
+{
+	/* Error checking before accessing. */
+	bool error = true;
+	if (data == NULL)
+		ds_error(DS_MSG_NULL_PTR);
+	else if (vect_empty(vect))
+		ds_error(DS_MSG_EMPTY);
+	else if (index >= vect_size(vect))
+		ds_error(DS_MSG_OUT_OF_BOUNDS);
+	else error = false;
+	if (error) return;
+
+	vect->table[vect->start + index] = data;
+}
+
+/*
+Inserts the given element at the provided index.
+Ω(1), Θ(n), O(n)
+*/
+void vect_insert(struct Vector * const vect, const unsigned int index, const void * const data)
+{
+	if (data == NULL)
+		ds_error(DS_MSG_NULL_PTR);
+	else if (index > vect_size(vect))
+		ds_error(DS_MSG_OUT_OF_BOUNDS);
+	else if (index == 0)
+		vect_push_front(vect, data);
+	else if (index == vect_size(vect))
+		vect_push_back(vect, data);
+	else
+	{
+		/* Determine if we should left leftwards or rightwards.
+		Shift the array in the direction where there is the most space. */
+		const bool shift_left = vect->start >= vect->capacity - vect->end - 1;
+
+		/* If there is no space to shift, grow the array. */
+		if ((shift_left && vect->start == 0) || (!shift_left && vect->end + 1 == vect->capacity))
+			vect_grow(vect);
+
+		/* Shift elements before or after the index by one. */
+		const unsigned int target_index = vect->start + index;
+		if (shift_left)
+			for (unsigned int i = --vect->start; i < target_index; i++)
+				vect->table[i] = vect->table[i + 1];
+		else
+			for (unsigned int i = vect->end++; i >= target_index; i--)
+				vect->table[i + 1] = vect->table[i];
+		vect->size++;
+
+		/* Set the given value as the new value. */
+		vect_assign(vect, index, data);
+	}
+}
+
+/*
 Inserts the given element at the end of the Vector.
 Ω(1), Θ(1), O(n)
 */
@@ -187,7 +275,7 @@ void vect_pop_back(Vector * const vect)
 
 /* 
 Removes the element at the front of the Vector.
-Ω(1), Θ(1), O(n)
+Ω(1), Θ(1), O(1)
 */
 void vect_pop_front(Vector * const vect)
 {
@@ -235,7 +323,7 @@ void vect_grow(Vector * const vect)
 	const void** const expanded_table = ds_calloc(expanded_capacity, sizeof(void*));
 
 	/* Place the values from the old table into the middle of the larger one. */
-	const unsigned int expanded_start = expanded_capacity / 2 - vect->size / 2;
+	const unsigned int expanded_start = (expanded_capacity - 1) / 2 - (vect->size - 1) / 2;
 	unsigned int expanded_iter = !vect_empty(vect) ? expanded_start - 1 : expanded_start;
 	for (unsigned int i = 0; i < vect_size(vect); i++)
 		expanded_table[++expanded_iter] = vect_at(vect, i);

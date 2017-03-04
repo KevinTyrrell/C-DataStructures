@@ -1,4 +1,4 @@
-
+﻿
 /*
 Author: Kevin Tyrrell
 Date: 2/27/2017
@@ -8,6 +8,8 @@ Version: 1.2
 #pragma once
 
 #include "Tools.h"
+
+#include <math.h>
 
 /* Vector structure. */
 struct Vector
@@ -44,9 +46,14 @@ bool vect_empty(const struct Vector* const vect);
 void** vect_array(const struct Vector* const vect);
 /* Prints out the contents of the Vector using the toString function. */
 void vect_print(const struct Vector* const vect);
+/* Prints out the contents of the Vector (including NULL indexes) using the toString function. */
+void vect_debug_print(const struct Vector* const vect);
 
 /* ~~~~~ Mutators ~~~~~ */
 
+void vect_assign(const struct Vector* const vect, const unsigned int index, const void* const data);
+/* Inserts the given element at the provided index. */
+void vect_insert(struct Vector* const vect, const unsigned int index, const void* const data);
 /* Inserts the given element at the end of the Vector. */
 void vect_push_back(struct Vector* const vect, const void * const data);
 /* Inserts the given element at the front of the Vector. */

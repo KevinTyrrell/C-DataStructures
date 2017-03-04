@@ -76,7 +76,7 @@ void * ds_malloc(const size_t size)
 
 /* Calloc function which tracks memory usage. */
 void * ds_calloc(const size_t nitems, const size_t size)
-{
+{	
 	const void* const block = calloc(nitems, size);
 	if (block == NULL)
 		ds_error(DS_MSG_OUT_OF_MEM);
