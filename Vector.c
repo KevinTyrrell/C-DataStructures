@@ -288,7 +288,7 @@ void vect_pop_front(Vector * const vect)
 	}
 
 	if (vect->start < vect->end)
-		vect->end++;
+		vect->start++;
 	vect->size--;
 }
 

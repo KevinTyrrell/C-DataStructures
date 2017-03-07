@@ -65,6 +65,7 @@ void vect_pop_front(struct Vector* const vect);
 void vect_clear(struct Vector* const vect);
 /* Sorts the contents of the Vector using the compare function. */
 void vect_sort(struct Vector* const vect);
+void vect_debug_print(const struct Vector* const vect);
 
 /* ~~~~~ De-constructors ~~~~~ */
 
