@@ -122,7 +122,7 @@ void ll_push_front(struct LinkedList* const list, const void* const data)
 {
 	Node* const insert = Node_new(data);
 
-	if (ll_empty(list))
+	if (!ll_empty(list))
 	{
 		insert->next = list->root;
 		list->root->prev = insert;

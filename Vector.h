@@ -46,11 +46,10 @@ bool vect_empty(const struct Vector* const vect);
 void** vect_array(const struct Vector* const vect);
 /* Prints out the contents of the Vector using the toString function. */
 void vect_print(const struct Vector* const vect);
-/* Prints out the contents of the Vector (including NULL indexes) using the toString function. */
-void vect_debug_print(const struct Vector* const vect);
 
 /* ~~~~~ Mutators ~~~~~ */
 
+/* Replaces an element in the Vector at a given index with a specified value. */
 void vect_assign(const struct Vector* const vect, const unsigned int index, const void* const data);
 /* Inserts the given element at the provided index. */
 void vect_insert(struct Vector* const vect, const unsigned int index, const void* const data);
@@ -62,6 +61,10 @@ void vect_push_front(struct Vector* const vect, const void * const data);
 void vect_pop_back(struct Vector* const vect);
 /* Removes the element at the front of the Vector. */
 void vect_pop_front(struct Vector* const vect);
+/* Removes all elements from the Vector while preserving the capacity. */
+void vect_clear(struct Vector* const vect);
+/* Sorts the contents of the Vector using the compare function. */
+void vect_sort(struct Vector* const vect);
 
 /* ~~~~~ De-constructors ~~~~~ */
 
