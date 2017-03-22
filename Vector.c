@@ -29,10 +29,10 @@ struct Vector * Vector_new(int(*compare)(const void*, const void*), char*(*toStr
 	return vect;
 }
 
-/* 
-Returns the value at the given index.
-Ω(1), Θ(1), O(1)
-*/
+/*
+ * Returns the value at the given index.
+ * Ω(1), Θ(1), O(1)
+ */
 void* vect_at(const Vector * const vect, const unsigned int index)
 {
 	/* Error checking before accessing. */
@@ -60,7 +60,7 @@ void * vect_front(const Vector * const vect)
 		return NULL;
 	}
 
-	return vect_at(vect, 0);
+	return (void*)vect->table[vect->start];
 }
 
 /*
@@ -75,7 +75,7 @@ void * vect_back(const Vector * const vect)
 		return NULL;
 	}
 
-	return vect_at(vect, vect->size - 1);
+	return (void*)vect->table[vect->end];
 }
 
 /*
@@ -96,26 +96,24 @@ bool vect_empty(const Vector * const vect)
 	return vect->size == 0;
 }
 
-/* 
- * TODO:
-Returns an array of all contents inside the Vector.
-Remember to call `ds_free(array, size of(void*) * vect_size(vector))` to destroy the array.
-Ω(n), Θ(n), O(n)
-*/
+/*
+ * Returns an array of all elements inside the Vector.
+ * Remember to call `free` on the dynamically allocated array.
+ * Ω(n), Θ(n), O(n)
+ */
 void ** vect_array(const struct Vector * const vect)
 {
-	const void** const arr = ds_calloc(vect_size(vect), sizeof(void*));
-	for (unsigned int i = 0; i < vect_size(vect); i++)
+	const void** const arr = calloc(vect_size(vect), sizeof(void*));
+	for (unsigned int i = 0, size = vect_size(vect); i < size; i++)
 		arr[i] = vect_at(vect, i);
 	
 	return arr;
 }
 
-/* 
- * TODO:
-Prints out the contents of the Vector using the toString function.
-Ω(n), Θ(n), O(n)
-*/
+/*
+ * Prints out the contents of the Vector using the toString function.
+ * Ω(n), Θ(n), O(n)
+ */
 void vect_print(const Vector * const vect)
 {
 	printf_s("%c", '[');
@@ -126,7 +124,7 @@ void vect_print(const Vector * const vect)
 }
 
 /*
- * Prints out the contents of the Vector (including NULL indexes) using the toString function.
+ * Prints out the internal structure of the inner array.
  * Ω(n), Θ(n), O(n)
  */
 void vect_debug_print(const Vector* const vect)
@@ -243,11 +241,10 @@ void vect_push_back(Vector * const vect, const void * const data)
 	vect->size++;
 }
 
-/* 
- * TODO:
-Inserts the given element at the front of the Vector.
-Ω(1), Θ(1), O(n)
-*/
+/*
+ * Inserts the given element at the front of the Vector.
+ * Ω(1), Θ(1), O(n)
+ */
 void vect_push_front(Vector * const vect, const void * const data)
 {
 	if (data == NULL)
@@ -257,22 +254,22 @@ void vect_push_front(Vector * const vect, const void * const data)
 	}
 
 	/* Check if we need to increase the array's capacity. */
-	if (vect->start == 0)
+	if (vect_full(vect))
 		vect_grow(vect);
 
-	/* If the Vector is empty, we can't let the decrement happen.
-	Otherwise, our `start` will be over NULL indexes. */
+	/* When Vector has one or less element(s), start and end must point to the same index. */
 	if (!vect_empty(vect))
-		vect->start--;
+		/* Increment end and wrap. */
+		vect->start = wrap_add(vect->start, -1, 0, vect->capacity - 1);
+
 	vect->table[vect->start] = data;
 	vect->size++;
 }
 
-/* 
- * TODO:
-Removes the element at the end of the Vector.
-Ω(1), Θ(1), O(n)
-*/
+/*
+ * Removes the element at the end of the Vector.
+ * Ω(1), Θ(1), O(n)
+ */
 void vect_pop_back(Vector * const vect)
 {
 	if (vect_empty(vect))
@@ -281,14 +278,15 @@ void vect_pop_back(Vector * const vect)
 		return;
 	}
 	
-	if (vect->end > vect->start)
-		vect->end--;
+	/* When Vector has one or less element(s), start and end must point to the same index. */
+	if (vect_size(vect) > 1)
+		vect->end = wrap_add(vect->end, -1, 0, vect->capacity - 1);
 	vect->size--;
 }
 
-/* 
-Removes the element at the front of the Vector.
-Ω(1), Θ(1), O(1)
+/*
+* Removes the element at the front of the Vector.
+* Ω(1), Θ(1), O(n)
 */
 void vect_pop_front(Vector * const vect)
 {
@@ -298,8 +296,9 @@ void vect_pop_front(Vector * const vect)
 		return;
 	}
 
-	if (vect->start < vect->end)
-		vect->start++;
+	/* When Vector has one or less element(s), start and end must point to the same index. */
+	if (vect_size(vect) > 1)
+		vect->start = wrap_add(vect->start, 1, 0, vect->capacity - 1);
 	vect->size--;
 }
 
@@ -312,7 +311,6 @@ void vect_clear(Vector * const vect)
 	const unsigned int middle = vect_middle(vect);
 	vect->start = middle;
 	vect->end = middle;
-	// TODO: vect->table[middle] = NULL;
 	vect->size = 0;
 }
 

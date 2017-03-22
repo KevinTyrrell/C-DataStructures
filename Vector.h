@@ -2,7 +2,7 @@
 /*
 Author: Kevin Tyrrell
 Date: 2/27/2017
-Version: 1.2
+Version: 1.3
 */
 
 #pragma once
@@ -42,11 +42,11 @@ void* vect_back(const struct Vector* const vect);
 size_t vect_size(const struct Vector* const vect);
 /* Returns true if the Vector is empty. */
 bool vect_empty(const struct Vector* const vect);
-/* Returns an array of all contents inside the Vector. */
+/* Returns an array of all elements inside the Vector. */
 void** vect_array(const struct Vector* const vect);
 /* Prints out the contents of the Vector using the toString function. */
 void vect_print(const struct Vector* const vect);
-
+/* Prints out the internal structure of the inner array. */
 void vect_debug_print(const struct Vector* const vect);
 
 /* ~~~~~ Mutators ~~~~~ */
