@@ -42,6 +42,8 @@ void* vect_back(const struct Vector* const vect);
 size_t vect_size(const struct Vector* const vect);
 /* Returns true if the Vector is empty. */
 bool vect_empty(const struct Vector* const vect);
+/* Returns true if the Vector contains the provided element. */
+bool vect_contains(const struct Vector* const vect, const void* const data);
 /* Returns an array of all elements inside the Vector. */
 void** vect_array(const struct Vector* const vect);
 /* Prints out the contents of the Vector using the toString function. */

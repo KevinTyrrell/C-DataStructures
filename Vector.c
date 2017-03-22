@@ -9,10 +9,9 @@ typedef struct Vector Vector;
 /* Convenience functions. */
 bool vect_full(const Vector* const vect);
 void vect_grow(Vector* const vect);
-unsigned int vect_middle(const Vector* const vect);
+void swap(const void** const v1, const void** const v2);
 unsigned int vect_index(const Vector* const vect, const unsigned int index);
 unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const unsigned int upper);
-void swap(const void** const v1, const void** const v2);
 // TODO: void** vect_merge_sort(int(*compare)(const void*, const void*), void** const arr, const size_t size);
 
 /* Constructor function. */
@@ -21,9 +20,6 @@ struct Vector * Vector_new(int(*compare)(const void*, const void*), char*(*toStr
 	Vector* const vect = ds_calloc(1, sizeof(Vector));
 	vect->table = ds_calloc(DEFAULT_INITIAL_CAPACITY, sizeof(void*));
 	vect->capacity = DEFAULT_INITIAL_CAPACITY;
-	const unsigned int middle = vect_middle(vect);
-	vect->start = middle;
-	vect->end = middle;
 	vect->compare = compare;
 	vect->toString = toString;
 	return vect;
@@ -97,11 +93,23 @@ bool vect_empty(const Vector * const vect)
 }
 
 /*
+ * Returns true if the Vector contains the provided element.
+ * Ω(1), Θ(1), O(1)
+ */
+bool vect_contains(const struct Vector* const vect, const void* const data)
+{
+	for (unsigned int i = 0, size = vect_size(vect); i < size; i++)
+		if (vect->compare(vect_at(vect, i), data) == 0)
+			return true;
+	return false;
+}
+
+/*
  * Returns an array of all elements inside the Vector.
  * Remember to call `free` on the dynamically allocated array.
  * Ω(n), Θ(n), O(n)
  */
-void ** vect_array(const struct Vector * const vect)
+void** vect_array(const struct Vector* const vect)
 {
 	const void** const arr = calloc(vect_size(vect), sizeof(void*));
 	for (unsigned int i = 0, size = vect_size(vect); i < size; i++)
@@ -114,7 +122,7 @@ void ** vect_array(const struct Vector * const vect)
  * Prints out the contents of the Vector using the toString function.
  * Ω(n), Θ(n), O(n)
  */
-void vect_print(const Vector * const vect)
+void vect_print(const Vector* const vect)
 {
 	printf_s("%c", '[');
 	for (unsigned int i = 0; i < vect->size; i++)
@@ -159,7 +167,7 @@ void vect_debug_print(const Vector* const vect)
  * Replaces an element in the Vector at a given index with a specified value.
  * Ω(1), Θ(1), O(1)
  */
-void vect_assign(const Vector * const vect, const unsigned int index, const void * const data)
+void vect_assign(const Vector* const vect, const unsigned int index, const void* const data)
 {
 	/* Error checking before accessing. */
 	bool error = true;
@@ -176,10 +184,10 @@ void vect_assign(const Vector * const vect, const unsigned int index, const void
 }
 
 /*
- *TODO:
-Inserts the given element at the provided index.
-Ω(1), Θ(n), O(n)
-*/
+ * TODO: Attempt to simplify algorithm.
+ * Inserts the given element at the provided index.
+ * Ω(1), Θ(n), O(n)
+ */
 void vect_insert(struct Vector * const vect, const unsigned int index, const void * const data)
 {
 	bool exit = true;
@@ -193,25 +201,39 @@ void vect_insert(struct Vector * const vect, const unsigned int index, const voi
 		vect_push_back(vect, data);
 	else exit = false;
 	if (exit) return;
-	
-	/* Determine if we should left leftwards or rightwards.
-	Shift the array in the direction where there is the most space. */
-	const bool shift_left = vect->start >= vect->capacity - vect->end - 1;
 
-	/* If there is no space to shift, grow the array. */
-	if ((shift_left && vect->start == 0) || (!shift_left && vect->end + 1 == vect->capacity))
+	/* Check if we need to increase the array's capacity. */
+	if (vect_full(vect))
 		vect_grow(vect);
+	
+	unsigned int iter, target, dX;
 
-	/* Shift elements before or after the index by one. */
-	const unsigned int target_index = vect->start + index;
-	if (shift_left)
-		for (unsigned int i = --vect->start; i < target_index; i++)
-			vect->table[i] = vect->table[i + 1];
+	/* Check whether it is less expensive to shift rightwards. */
+	if (vect->size - index - 1 <= index)
+	{
+		vect->end = wrap_add(vect->end, 1, 0, vect->capacity - 1);
+		target = vect_index(vect, index);
+		iter = vect->end;
+		dX = -1;
+	}
 	else
-		for (unsigned int i = vect->end++; i >= target_index; i--)
-			vect->table[i + 1] = vect->table[i];
-	vect->size++;
+	{
+		/* Shifting backwards will make all n indexes into (n - 1), so subtract one from target. */
+		target = wrap_add(vect_index(vect, index), -1, 0, vect->capacity - 1);
+		vect->start = wrap_add(vect->start, -1, 0, vect->capacity - 1);
+		iter = vect->start;
+		dX = 1;
+	}
 
+	/* Shift leftward or rightward depending on the above conditions. */
+	while (iter != target)
+	{
+		const unsigned int next = wrap_add(iter, dX, 0, vect->capacity - 1);
+		swap(&vect->table[iter], &vect->table[next]);
+		iter = next;
+	}
+	
+	vect->size++;
 	/* Set the given value as the new value. */
 	vect_assign(vect, index, data);
 }
@@ -308,9 +330,8 @@ void vect_pop_front(Vector * const vect)
  */
 void vect_clear(Vector * const vect)
 {
-	const unsigned int middle = vect_middle(vect);
-	vect->start = middle;
-	vect->end = middle;
+	vect->start = 0;
+	vect->end = 0;
 	vect->size = 0;
 }
 
@@ -327,16 +348,16 @@ void vect_sort(Vector * const vect)
 	ds_free(arr, vect->size * sizeof(void*));
 	 
 	/* Place all of the sorted values into the middle of the Vector. */
-	vect->start = vect_middle(vect) - (vect->size - 1) / 2;
+	//vect->start = array_middle_index(vect) - (vect->size - 1) / 2;
 	vect->end = vect->start + vect->size - 1;
 	for (unsigned int i = vect->start, h = 0; i <= vect->end; i++)
 		vect->table[i] = sorted[h++];
 }
 
-/* 
-De-constructor function. 
-Ω(1), Θ(1), O(1)
-*/
+/*
+ * De-constructor function. 
+ * Ω(1), Θ(1), O(1)
+ */
 void vect_destroy(const Vector * const vect)
 {
 	ds_free(vect->table, vect->capacity * sizeof(void*));
@@ -352,40 +373,37 @@ bool vect_full(const Vector* const vect)
 	return vect->size == vect->capacity;
 }
 
-/* 
- * TODO:
-Grows the underlying array by a factor of `VECTOR_GROW_AMOUNT`.
-Values from the previous Vector are placed in the middle of the new Vector.
-Ω(n), Θ(n), O(n)
-*/
+/*
+ * Grows the underlying array by a factor of `VECTOR_GROW_AMOUNT`.
+ * Ω(n), Θ(n), O(n)
+ */
 void vect_grow(Vector * const vect)
 {
 	/* Expand the underlying array by a set amount. */
 	const size_t expanded_capacity = vect->capacity * VECTOR_GROW_AMOUNT;
 	const void** const expanded_table = ds_calloc(expanded_capacity, sizeof(void*));
 
-	/* Place the values from the old table into the middle of the larger one. */
-	const unsigned int expanded_start = (expanded_capacity - 1) / 2 - (vect->size - 1) / 2;
-	unsigned int expanded_iter = !vect_empty(vect) ? expanded_start - 1 : expanded_start;
-	for (unsigned int i = 0; i < vect_size(vect); i++)
-		expanded_table[++expanded_iter] = vect_at(vect, i);
+	for (unsigned int i = 0, size = vect_size(vect); i < size; i++)
+		expanded_table[i] = vect_at(vect, i);
 
 	/* Destroy the old table. */
 	ds_free(vect->table, vect->capacity * sizeof(void*));
 	/* Update the Vector's properties. */
 	vect->table = expanded_table;
 	vect->capacity = expanded_capacity;
-	vect->start = expanded_start;
-	vect->end = expanded_iter;
+	vect->start = 0;
+	vect->end = vect_size(vect) - 1;
 }
 
 /*
- * Locates the center of the Vector, preferring the left in even capacities.
- * Ω(1), Θ(1), O(1)
- */
-unsigned int vect_middle(const Vector * const vect)
+* Swap function for sorting and shifting algorithms.
+* Ω(1), Θ(1), O(1)
+*/
+void swap(const void** const v1, const void** const v2)
 {
-	return (vect->capacity - 1) / 2;
+	const void* const temp = *v1;
+	*v1 = *v2;
+	*v2 = temp;
 }
 
 /*
@@ -416,17 +434,6 @@ unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const 
 	}
 
 	return val;
-}
-
-/*
-* Swap function for sorting and shifting algorithms.
-* Ω(1), Θ(1), O(1)
-*/
-void swap(const void** const v1, const void** const v2)
-{
-	const void* const temp = *v1;
-	*v1 = *v2;
-	*v2 = temp;
 }
 
 /* TODO: Helper function for vect_sort. */
