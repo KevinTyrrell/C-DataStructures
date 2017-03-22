@@ -26,7 +26,7 @@ struct RedBlackTree
 	char*(*toString)(const void* const);
 };
 
-/* KeySet for Key/Value entries. */
+/* map_Entry for Key/Value entries. */
 struct rbt_KeySet
 {
 	void *key, *value;

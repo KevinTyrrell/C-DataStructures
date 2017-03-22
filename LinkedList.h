@@ -16,10 +16,10 @@ struct LinkedList
 {
 	struct ll_Node *root, *tail;
 	size_t size;
-
 	/* Pointer functions */
 	bool(*equals)(void*, void*);
 	char*(*toString)(void*);
+	bool thread_lock;
 };
 
 /* Node structure. */
