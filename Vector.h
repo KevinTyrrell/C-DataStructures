@@ -2,7 +2,7 @@
 /*
 Author: Kevin Tyrrell
 Date: 2/27/2017
-Version: 1.3
+Version: 1.4
 */
 
 #pragma once
@@ -67,8 +67,8 @@ void vect_pop_back(struct Vector* const vect);
 void vect_pop_front(struct Vector* const vect);
 /* Removes all elements from the Vector while preserving the capacity. */
 void vect_clear(struct Vector* const vect);
-/* Sorts the contents of the Vector using the compare function. */
-void vect_sort(struct Vector* const vect);
+/* Sorts elements inside the Vector in descending order. */
+void vect_sort(const struct Vector* const vect);
 
 /* ~~~~~ De-constructors ~~~~~ */
 

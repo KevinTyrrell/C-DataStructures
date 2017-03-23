@@ -1,4 +1,5 @@
-﻿#include "Vector.h"
+﻿
+#include "Vector.h"
 
 #define DEFAULT_INITIAL_CAPACITY 10
 #define VECTOR_GROW_AMOUNT 2
@@ -9,13 +10,14 @@ typedef struct Vector Vector;
 /* Convenience functions. */
 bool vect_full(const Vector* const vect);
 void vect_grow(Vector* const vect);
-void swap(const void** const v1, const void** const v2);
+void vect_swap(const Vector* const vect, const unsigned int i, const unsigned int h);
+void ptr_swap(const void** const v1, const void** const v2);
+void vect_merge_sort(const Vector* const vect, const unsigned int start, const size_t size);
 unsigned int vect_index(const Vector* const vect, const unsigned int index);
 unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const unsigned int upper);
-// TODO: void** vect_merge_sort(int(*compare)(const void*, const void*), void** const arr, const size_t size);
 
 /* Constructor function. */
-struct Vector * Vector_new(int(*compare)(const void*, const void*), char*(*toString)(const void*))
+struct Vector* Vector_new(int(*compare)(const void*, const void*), char*(*toString)(const void*))
 {
 	Vector* const vect = ds_calloc(1, sizeof(Vector));
 	vect->table = ds_calloc(DEFAULT_INITIAL_CAPACITY, sizeof(void*));
@@ -29,7 +31,7 @@ struct Vector * Vector_new(int(*compare)(const void*, const void*), char*(*toStr
  * Returns the value at the given index.
  * Ω(1), Θ(1), O(1)
  */
-void* vect_at(const Vector * const vect, const unsigned int index)
+void* vect_at(const struct Vector* const vect, const unsigned int index)
 {
 	/* Error checking before accessing. */
 	bool error = true;
@@ -48,7 +50,7 @@ void* vect_at(const Vector * const vect, const unsigned int index)
  * Returns the value at the front of the Vector.
  * Ω(n), Θ(n), O(n)
  */
-void * vect_front(const Vector * const vect)
+void* vect_front(const struct Vector* const vect)
 {
 	if (vect_empty(vect))
 	{
@@ -63,7 +65,7 @@ void * vect_front(const Vector * const vect)
  * Returns the value at the end of the Vector.
  * Ω(1), Θ(1), O(1)
  */
-void * vect_back(const Vector * const vect)
+void* vect_back(const struct Vector* const vect)
 {
 	if (vect_empty(vect))
 	{
@@ -78,7 +80,7 @@ void * vect_back(const Vector * const vect)
  * Returns the size of the Vector.
  * Ω(1), Θ(1), O(1)
  */
-size_t vect_size(const Vector * const vect)
+size_t vect_size(const struct Vector* const vect)
 {
 	return vect->size;
 }
@@ -87,7 +89,7 @@ size_t vect_size(const Vector * const vect)
  * Returns true if the Vector is empty.
  * Ω(1), Θ(1), O(1)
  */
-bool vect_empty(const Vector * const vect)
+bool vect_empty(const struct Vector* const vect)
 {
 	return vect->size == 0;
 }
@@ -122,7 +124,7 @@ void** vect_array(const struct Vector* const vect)
  * Prints out the contents of the Vector using the toString function.
  * Ω(n), Θ(n), O(n)
  */
-void vect_print(const Vector* const vect)
+void vect_print(const struct Vector* const vect)
 {
 	printf_s("%c", '[');
 	for (unsigned int i = 0; i < vect->size; i++)
@@ -135,7 +137,7 @@ void vect_print(const Vector* const vect)
  * Prints out the internal structure of the inner array.
  * Ω(n), Θ(n), O(n)
  */
-void vect_debug_print(const Vector* const vect)
+void vect_debug_print(const struct Vector* const vect)
 {
 	/* Determine how many rows we will need to print and go through each one. */
 	const unsigned int INDEXES_PER_ROW = 10;
@@ -161,13 +163,15 @@ void vect_debug_print(const Vector* const vect)
 			printf_s("[%u] ", h % 10);
 		printf_s("\n");
 	}
+
+	printf_s("Vector Status -- Size: %zu, Capacity: %zu, Start: %u, End: %u.\n", vect_size(vect), vect->capacity, vect->start, vect->end);
 }
 
 /*
  * Replaces an element in the Vector at a given index with a specified value.
  * Ω(1), Θ(1), O(1)
  */
-void vect_assign(const Vector* const vect, const unsigned int index, const void* const data)
+void vect_assign(const struct Vector* const vect, const unsigned int index, const void* const data)
 {
 	/* Error checking before accessing. */
 	bool error = true;
@@ -229,7 +233,7 @@ void vect_insert(struct Vector * const vect, const unsigned int index, const voi
 	while (iter != target)
 	{
 		const unsigned int next = wrap_add(iter, dX, 0, vect->capacity - 1);
-		swap(&vect->table[iter], &vect->table[next]);
+		ptr_swap(&vect->table[iter], &vect->table[next]);
 		iter = next;
 	}
 	
@@ -292,7 +296,7 @@ void vect_push_front(Vector * const vect, const void * const data)
  * Removes the element at the end of the Vector.
  * Ω(1), Θ(1), O(n)
  */
-void vect_pop_back(Vector * const vect)
+void vect_pop_back(struct Vector* const vect)
 {
 	if (vect_empty(vect))
 	{
@@ -310,7 +314,7 @@ void vect_pop_back(Vector * const vect)
 * Removes the element at the front of the Vector.
 * Ω(1), Θ(1), O(n)
 */
-void vect_pop_front(Vector * const vect)
+void vect_pop_front(struct Vector* const vect)
 {
 	if (vect_empty(vect))
 	{
@@ -328,7 +332,7 @@ void vect_pop_front(Vector * const vect)
  * Removes all elements from the Vector while preserving the capacity.
  * Ω(1), Θ(1), O(1)
  */
-void vect_clear(Vector * const vect)
+void vect_clear(struct Vector* const vect)
 {
 	vect->start = 0;
 	vect->end = 0;
@@ -336,32 +340,24 @@ void vect_clear(Vector * const vect)
 }
 
 /*
- *TODO:
-Sorts the array in descending order using the `compare` function.
-Implementation uses Merge Sort.
-Ω(n log(n)), Θ(n log(n)), O(n log(n))
-*/
-void vect_sort(Vector * const vect)
+ * Sorts elements inside the Vector in descending order.
+ * Uses the `compare` function provided to the Vector.
+ * Implementation uses Merge Sort.
+ * Ω(n log(n)), Θ(n log(n)), O(n log(n))
+ */
+void vect_sort(const struct Vector* const vect)
 {
-	void** arr = vect_array(vect);
-	void** sorted = NULL;// vect_merge_sort(vect->compare, arr, vect->size);
-	ds_free(arr, vect->size * sizeof(void*));
-	 
-	/* Place all of the sorted values into the middle of the Vector. */
-	//vect->start = array_middle_index(vect) - (vect->size - 1) / 2;
-	vect->end = vect->start + vect->size - 1;
-	for (unsigned int i = vect->start, h = 0; i <= vect->end; i++)
-		vect->table[i] = sorted[h++];
+	vect_merge_sort(vect, 0, vect->size);
 }
 
 /*
  * De-constructor function. 
  * Ω(1), Θ(1), O(1)
  */
-void vect_destroy(const Vector * const vect)
+void vect_destroy(const struct Vector* const vect)
 {
 	ds_free(vect->table, vect->capacity * sizeof(void*));
-	ds_free(vect, sizeof(Vector));
+	ds_free((void*)vect, sizeof(Vector));
 }
 
 /*
@@ -399,7 +395,18 @@ void vect_grow(Vector * const vect)
 * Swap function for sorting and shifting algorithms.
 * Ω(1), Θ(1), O(1)
 */
-void swap(const void** const v1, const void** const v2)
+void vect_swap(const Vector* const vect, const unsigned int i, const unsigned int h)
+{
+	const void* const temp = vect_at(vect, i);
+	vect_assign(vect, i, vect_at(vect, h));
+	vect_assign(vect, h, temp);
+}
+
+/*
+* Swap function for sorting and shifting algorithms.
+* Ω(1), Θ(1), O(1)
+*/
+void ptr_swap(const void** const v1, const void** const v2)
 {
 	const void* const temp = *v1;
 	*v1 = *v2;
@@ -410,14 +417,14 @@ void swap(const void** const v1, const void** const v2)
  * Converts regular indexes from 0->(capacity - 1) into indexes that wrap around the Vector. 
  * Ω(1), Θ(1), O(1)
  */
-unsigned int vect_index(const Vector * const vect, const unsigned int index)
+unsigned int vect_index(const Vector* const vect, const unsigned int index)
 {
 	return (vect->start + index) % vect->capacity;
 }
 
 /*
  * Given a value and a change in that value (dX), find the sum and wrap it between lower and upper.
- * Ω(1), Θ(1), O(1)
+ * Ω(n), Θ(n), O(n)
  */
 unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const unsigned int upper)
 {
@@ -436,43 +443,47 @@ unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const 
 	return val;
 }
 
-/* TODO: Helper function for vect_sort. */
-void** vect_merge_sort(int(*compare)(const void*, const void*), void** const arr, const size_t size)
+/*
+ * See: vect_sort.
+ */
+void vect_merge_sort(const Vector* const vect, const unsigned int start, const size_t size)
 {
+	/* Base case. */
 	if (size <= 1)
-		return arr;
-	/* Divison ceiling for unsigned int. */
-	const size_t left_size = (size + 2 - 1) / 2;
-	/* Right array will default to be smaller if odd. */
-	const size_t right_size = size / 2;
+		return;
 
-	/* Split the parameter array into two smaller arrays. */
-	void **left_arr = ds_malloc(sizeof(void*) * left_size);
-	void **right_arr = ds_malloc(sizeof(void*) * right_size);
-	for (unsigned int i = 0; i < size; i++)
-		if (i < left_size)
-			left_arr[i] = arr[i];
+	/* Split the Vector into half using integer pointers. */
+	const size_t size_right = size / 2;
+	const size_t size_left = size - size_right;
+	const unsigned int start_right = start + size_left;
+
+	/* Sort the left and right sub-arrays recursively. */
+	vect_merge_sort(vect, start, size_left);
+	vect_merge_sort(vect, start_right, size_right);
+
+	/* Create two sub-arrays to assist in the merge process. */
+	const void** const arr_left = ds_calloc(size_left, sizeof(void*));
+	const void** const arr_right = ds_calloc(size_right, sizeof(void*));
+	for (unsigned int i = 0; i < size_left; i++)
+		arr_left[i] = vect_at(vect, start + i);
+	for (unsigned int i = 0; i < size_right; i++)
+		arr_right[i] = vect_at(vect, start_right + i);
+	
+	/* Maintain track of an iterator for the combined array and the two sub-arrays. */
+	unsigned int iter = start, iter_left = 0, iter_right = 0;
+
+	/* Merge the two sub-arrays back into the primary array. */
+	while (iter_left < size_left && iter_right < size_right)
+		if (vect->compare(arr_left[iter_left], arr_right[iter_right]) <= 0)
+			vect_assign(vect, iter++, arr_left[iter_left++]);
 		else
-			right_arr[i - left_size] = arr[i];
-
-	/* Sort the sub-arrays recursively. */
-	void** const left_sorted = vect_merge_sort(compare, left_arr, left_size);
-	void** const right_sorted = vect_merge_sort(compare, right_arr, right_size);
-
-	/* Place the sorted elements back into the parameter array in sorted order. */
-	unsigned int i = 0, left_iter = 0, right_iter = 0;
-	while (left_iter < left_size && right_iter < right_size)
-		if (compare(left_arr[left_iter], right_arr[right_iter]) <= 0)
-			arr[i++] = left_arr[left_iter++];
-		else
-			arr[i++] = right_arr[right_iter++];
-	while (left_iter < left_size)
-		arr[i++] = left_arr[left_iter++];
-	while (right_iter < right_size)
-		arr[i++] = right_arr[right_iter++];
+			vect_assign(vect, iter++, arr_right[iter_right++]);
+	while (iter_left < size_left)
+		vect_assign(vect, iter++, arr_left[iter_left++]);
+	while (iter_right < size_right)
+		vect_assign(vect, iter++, arr_right[iter_right++]);
 
 	/* Clean up memory and return the sorted array. */
-	ds_free(left_sorted, left_size * sizeof(void*));
-	ds_free(right_sorted, right_size * sizeof(void*));
-	return arr;
+	ds_free(arr_left, size_left * sizeof(void*));
+	ds_free(arr_right, size_right * sizeof(void*));
 }
