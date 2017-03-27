@@ -13,8 +13,23 @@ void vect_grow(Vector* const vect);
 void vect_swap(const Vector* const vect, const unsigned int i, const unsigned int h);
 void ptr_swap(const void** const v1, const void** const v2);
 void vect_merge_sort(const Vector* const vect, const unsigned int start, const size_t size);
+void vect_shift(Vector* const vect, const unsigned int start, const unsigned int stop, const bool leftwards);
 unsigned int vect_index(const Vector* const vect, const unsigned int index);
 unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const unsigned int upper);
+bool vect_in_domain(const Vector* const vect, const unsigned int arr_index);
+
+/* Structure to assist in looping through Vector. */
+typedef struct
+{
+	unsigned int index;
+	const Vector* const ref;
+} Iterator;
+
+/* Iterator functionality. */
+void iter_next(Iterator* const iter);
+void iter_prev(Iterator* const iter);
+bool iter_has_next(const Iterator* const iter);
+bool iter_has_prev(const Iterator* const iter);
 
 /* Constructor function. */
 struct Vector* Vector_new(int(*compare)(const void*, const void*), char*(*toString)(const void*))
@@ -188,11 +203,10 @@ void vect_assign(const struct Vector* const vect, const unsigned int index, cons
 }
 
 /*
- * TODO: Attempt to simplify algorithm.
  * Inserts the given element at the provided index.
  * Ω(1), Θ(n), O(n)
  */
-void vect_insert(struct Vector * const vect, const unsigned int index, const void * const data)
+void vect_insert(struct Vector* const vect, const unsigned int index, const void* const data)
 {
 	bool exit = true;
 	if (data == NULL)
@@ -206,40 +220,78 @@ void vect_insert(struct Vector * const vect, const unsigned int index, const voi
 	else exit = false;
 	if (exit) return;
 
-	/* Check if we need to increase the array's capacity. */
 	if (vect_full(vect))
 		vect_grow(vect);
-	
-	unsigned int iter, target, dX;
 
-	/* Check whether it is less expensive to shift rightwards. */
-	if (vect->size - index - 1 <= index)
+	/* Check if shifting right is quicker. */
+	if (vect->size - 1 - index <= index)
 	{
 		vect->end = wrap_add(vect->end, 1, 0, vect->capacity - 1);
-		target = vect_index(vect, index);
-		iter = vect->end;
-		dX = -1;
+		vect_shift(vect, vect_index(vect, index), vect->end, false);
 	}
 	else
 	{
-		/* Shifting backwards will make all n indexes into (n - 1), so subtract one from target. */
-		target = wrap_add(vect_index(vect, index), -1, 0, vect->capacity - 1);
 		vect->start = wrap_add(vect->start, -1, 0, vect->capacity - 1);
-		iter = vect->start;
-		dX = 1;
+		vect_shift(vect, vect_index(vect, index), vect->start, true);
 	}
 
-	/* Shift leftward or rightward depending on the above conditions. */
-	while (iter != target)
-	{
-		const unsigned int next = wrap_add(iter, dX, 0, vect->capacity - 1);
-		ptr_swap(&vect->table[iter], &vect->table[next]);
-		iter = next;
-	}
-	
 	vect->size++;
-	/* Set the given value as the new value. */
 	vect_assign(vect, index, data);
+}
+
+/*
+* Attempts to remove a provided element from the Vector, if it exists.
+* Ω(n), Θ(n), O(n)
+*/
+bool vect_remove(struct Vector* const vect, const void* const data)
+{
+	if (data == NULL)
+	{
+		ds_error(DS_MSG_NULL_PTR);
+		return false;
+	}
+
+	const unsigned size = vect_size(vect);
+	for (unsigned int i = 0; i < size; i++)
+		/* Search for a data element that matches the parameter. */
+		if (vect->compare(vect_at(vect, i), data) == 0)
+		{
+			vect_erase(vect, i);
+			return true;
+		}
+
+	return false;
+}
+
+/*
+ * Erases an element from the Vector at a given index.
+ * Ω(1), Θ(n), O(n)
+ */
+void vect_erase(struct Vector* const vect, const unsigned int index)
+{
+	bool exit = true;
+	if (index > vect_size(vect))
+		ds_error(DS_MSG_OUT_OF_BOUNDS);
+	else if (index == 0)
+		vect_pop_front(vect);
+	else if (index == vect_size(vect) - 1)
+		vect_pop_back(vect);
+	else exit = false;
+	if (exit) return;
+
+	/* Check if shifting left is quicker. */
+	if (vect->size - 1 - index <= index)
+	{
+		vect_shift(vect, vect->end, vect_index(vect, index), true);
+		vect->end = wrap_add(vect->end, -1, 0, vect->capacity - 1);
+	}
+	else
+	{
+		vect_shift(vect, vect->start, vect_index(vect, index), false);
+		vect->start = wrap_add(vect->start, 1, 0, vect->capacity - 1);
+	}
+
+	vect->size--;
 }
 
 /*
@@ -434,13 +486,27 @@ unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const 
 		++dx;
 	}
 
-	while (dx > 0) 
+	while (dx > 0)
 	{
 		val = (val == upper) ? lower : val + 1;
 		--dx;
 	}
 
 	return val;
+}
+
+/*
+ * Returns true if the given array index is within start and end.
+ */
+bool vect_in_domain(const Vector* const vect, const unsigned int arr_index)
+{
+	if (vect_empty(vect))
+		return false;
+	/* Standard array form. */
+	if (vect->start <= vect->end)
+		return arr_index >= vect->start && arr_index <= vect->end;
+	/* Circular property is in effect. */
+	return arr_index >= vect->start || arr_index <= vect->end;
 }
 
 /*
@@ -486,4 +552,64 @@ void vect_merge_sort(const Vector* const vect, const unsigned int start, const s
 	/* Clean up memory and return the sorted array. */
 	ds_free(arr_left, size_left * sizeof(void*));
 	ds_free(arr_right, size_right * sizeof(void*));
+}
+
+/*
+ * Shifts the elements in the Vector left or right based on `leftwards`.
+ * The shift will begin from `start` and the furthest element will be moved to `stop`.
+ * Shifts may leave holes in the array and will not update `start` and `end` pointers of the Vector.
+ */
+void vect_shift(Vector* const vect, const unsigned int start, const unsigned int stop, const bool leftwards)
+{
+	/* Iterator will aid in safely looping through array. */
+	const Iterator iter = { stop, vect };
+	/* Shifting left means iterating rightwards and vice versa.
+	 * Function pointer makes this process much easier to read. */
+	void(*iterate)(Iterator* const);
+	iterate = leftwards ? &iter_next : &iter_prev;
+		
+	/* Iterate and swap. */
+	while (iter.index != start)
+	{
+		/* Swap the data with the iterator and its neighboring element. */
+		const unsigned int a = iter.index;
+		iterate(&iter);
+		ptr_swap(&vect->table[a], &vect->table[iter.index]);
+	}
+}
+
+/*
+ * Moves the Iterator forward one index.
+ * Ω(1), Θ(1), O(1)
+ */
+void iter_next(Iterator* const iter)
+{
+	iter->index = wrap_add(iter->index, 1, 0, iter->ref->capacity - 1);		
+}
+
+/*
+ * Moves the Iterator backward one index.
+ * Ω(1), Θ(1), O(1)
+ */
+void iter_prev(Iterator* const iter)
+{
+	iter->index = wrap_add(iter->index, -1, 0, iter->ref->capacity - 1);
+}
+
+/*
+ * Returns true if the Iterator can move forward.
+ * Ω(1), Θ(1), O(1)
+ */
+bool iter_has_next(const Iterator* const iter)
+{
+	return iter->index != iter->ref->end;
+}
+
+/*
+* Returns true if the Iterator can move backwards.
+* Ω(1), Θ(1), O(1)
+*/
+bool iter_has_prev(const Iterator* const iter)
+{
+	return iter->index != iter->ref->start;
 }

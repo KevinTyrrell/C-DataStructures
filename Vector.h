@@ -2,7 +2,7 @@
 /*
 Author: Kevin Tyrrell
 Date: 2/27/2017
-Version: 1.4
+Version: 2.0
 */
 
 #pragma once
@@ -57,6 +57,10 @@ void vect_debug_print(const struct Vector* const vect);
 void vect_assign(const struct Vector* const vect, const unsigned int index, const void* const data);
 /* Inserts the given element at the provided index. */
 void vect_insert(struct Vector* const vect, const unsigned int index, const void* const data);
+/* Attempts to remove a provided element from the Vector, if it exists. */
+bool vect_remove(struct Vector* const vect, const void* const data);
+/* Erases an element from the Vector at a given index. */
+void vect_erase(struct Vector* const vect, const unsigned int index);
 /* Inserts the given element at the end of the Vector. */
 void vect_push_back(struct Vector* const vect, const void * const data);
 /* Inserts the given element at the front of the Vector. */
