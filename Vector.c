@@ -9,10 +9,12 @@ typedef struct Vector Vector;
 
 /* Convenience functions. */
 bool vect_full(const Vector* const vect);
-void vect_grow(Vector* const vect);
+void vect_grow(const Vector* const vect);
+void vect_grow_to(Vector* const vect, const size_t size);
 void vect_swap(const Vector* const vect, const unsigned int i, const unsigned int h);
 void ptr_swap(const void** const v1, const void** const v2);
 void vect_merge_sort(const Vector* const vect, const unsigned int start, const size_t size);
+void vect_quick_sort(const struct Vector* const vect, const unsigned int index, const size_t size);
 void vect_shift(Vector* const vect, const unsigned int start, const unsigned int stop, const bool leftwards);
 unsigned int vect_index(const Vector* const vect, const unsigned int index);
 unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const unsigned int upper);
@@ -381,6 +383,32 @@ void vect_pop_front(struct Vector* const vect)
 }
 
 /*
+ * Append data from another Vector to the end of this Vector.
+ * Ω(n), Θ(n), O(n)
+ */
+void vect_append_vect(const struct Vector* const vect, const struct Vector* const data)
+{
+	const size_t combined = vect_size(vect) + vect_size(data);
+	if (vect->capacity < combined)
+		vect_grow_to(vect, combined);
+	for (unsigned int i = 0, size = vect_size(data); i < size; i++)
+		vect_push_back(vect, vect_at(data, i));
+}
+
+/*
+* Append data from an array to the end of this Vector.
+* Ω(n), Θ(n), O(n)
+*/
+void vect_append_array(const struct Vector* const vect, const void** const data, const size_t size)
+{
+	const size_t combined = vect_size(vect) + size;
+	if (vect->capacity < combined)
+		vect_grow_to(vect, combined);
+	for (unsigned int i = 0; i < size; i++)
+		vect_push_back(vect, data[i]);
+}
+
+/*
  * Removes all elements from the Vector while preserving the capacity.
  * Ω(1), Θ(1), O(1)
  */
@@ -392,14 +420,14 @@ void vect_clear(struct Vector* const vect)
 }
 
 /*
- * Sorts elements inside the Vector in descending order.
+ * Sorts elements inside the Vector in ascending order.
  * Uses the `compare` function provided to the Vector.
- * Implementation uses Merge Sort.
- * Ω(n log(n)), Θ(n log(n)), O(n log(n))
+ * Implementation uses Quick Sort.
+ * Ω(n log(n)), Θ(n log(n)), O(n^2)
  */
 void vect_sort(const struct Vector* const vect)
 {
-	vect_merge_sort(vect, 0, vect->size);
+	vect_quick_sort(vect, 0, vect->size);
 }
 
 /*
@@ -425,13 +453,32 @@ bool vect_full(const Vector* const vect)
  * Grows the underlying array by a factor of `VECTOR_GROW_AMOUNT`.
  * Ω(n), Θ(n), O(n)
  */
-void vect_grow(Vector * const vect)
+void vect_grow(const Vector* const vect)
 {
 	/* Expand the underlying array by a set amount. */
-	const size_t expanded_capacity = vect->capacity * VECTOR_GROW_AMOUNT;
-	const void** const expanded_table = ds_calloc(expanded_capacity, sizeof(void*));
+	vect_grow_to(vect, vect->capacity * VECTOR_GROW_AMOUNT);
+}
 
-	for (unsigned int i = 0, size = vect_size(vect); i < size; i++)
+/*
+* Grows the underlying array, guaranteeing that the new capacity
+* is equal to or greater than the parameter `size`.
+* The Vector's capacity will always be of the form c = 10 * 2^n
+* Ω(n), Θ(n), O(n)
+*/
+void vect_grow_to(Vector* const vect, const size_t size)
+{
+	/* 
+	 * Solve for the expanded capacity.
+	 * The Vector only expands in increments of 10 * 2^n.
+	 * Expanded capacities must be of the form of c = 10
+	 */
+	const size_t expanded_capacity = DEFAULT_INITIAL_CAPACITY 
+		* (unsigned int)pow((double)VECTOR_GROW_AMOUNT, round(
+		log((double)size / DEFAULT_INITIAL_CAPACITY) 
+			/ log((double)VECTOR_GROW_AMOUNT)) + 1);
+
+	const void** const expanded_table = ds_calloc(expanded_capacity, sizeof(void*));
+	for (unsigned int i = 0, len = vect_size(vect); i < len; i++)
 		expanded_table[i] = vect_at(vect, i);
 
 	/* Destroy the old table. */
@@ -509,6 +556,37 @@ bool vect_in_domain(const Vector* const vect, const unsigned int arr_index)
 	return arr_index >= vect->start || arr_index <= vect->end;
 }
 
+void vect_quick_sort(const Vector* const vect, const unsigned int index, const size_t size)
+{
+	/* Array size of 1 means the partition is sorted. */
+	if (size <= 1)
+		return;
+	/* Pivot in this implementation is the right element. */
+	const unsigned int pivot_index = index + size - 1;
+	const void* const pivot = vect_at(vect, pivot_index);
+
+	/* Left and right iterators. */
+	unsigned int left = index, right = pivot_index;
+	
+	while (true)
+	{
+		/* Move the indexes until they cross OR find swappable values. */
+		while (left < right && vect->compare(vect_at(vect, left), pivot) < 0)
+			left++;
+		while (left < right && vect->compare(vect_at(vect, --right), pivot) > 0);
+
+		if (left >= right)
+			break;
+
+		vect_swap(vect, left, right);
+		left++;
+	}
+	
+	vect_swap(vect, left, pivot_index);
+	vect_quick_sort(vect, index, left - index);
+	vect_quick_sort(vect, left + 1, index + size - left - 1);
+}
+
 /*
  * See: vect_sort.
  */
@@ -558,6 +636,7 @@ void vect_merge_sort(const Vector* const vect, const unsigned int start, const s
  * Shifts the elements in the Vector left or right based on `leftwards`.
  * The shift will begin from `start` and the furthest element will be moved to `stop`.
  * Shifts may leave holes in the array and will not update `start` and `end` pointers of the Vector.
+ * Ω(n), Θ(n), O(n)
  */
 void vect_shift(Vector* const vect, const unsigned int start, const unsigned int stop, const bool leftwards)
 {
