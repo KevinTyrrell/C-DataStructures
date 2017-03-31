@@ -22,7 +22,7 @@ size_t MEM_CURRENT_ALLOCATIONS = 0, MEM_TOTAL_ALLOCATIONS = 0, MEM_BLOCKS_ALLOCA
 void ds_error(const char* const message)
 {
 	WORD prevColor = ds_changeColor(DS_LIGHT_RED);
-	fprintf_s(stderr, "\n\n%s\n\n", message);
+	fprintf(stderr, "\n\n%s\n\n", message);
 	/* Revert back to the previous color. */
 	ds_changeColor(prevColor);
 	if (ds_yesNo(DS_EXIT))
@@ -34,7 +34,7 @@ and return whether the user pressed Y (yes) as
 true or N (no) as false. */
 bool ds_yesNo(const char* const message)
 {
-	printf_s("%s (Y/N)?\n", message);
+	printf("%s (Y/N)?\n", message);
 
 	int input;
 	do
@@ -119,7 +119,7 @@ void ds_free(void * ptr, const size_t size)
 void ds_printMemStatus()
 {
 	const WORD prevColor = ds_changeColor(DS_LIGHT_TEAL);
-	printf_s("Active Allocations %-5zu Blocks Allocated: %-10zu Leakage: %.2f%%\n",
+	printf("Active Allocations %-5zu Blocks Allocated: %-10zu Leakage: %.2f%%\n",
 		MEM_CURRENT_ALLOCATIONS, MEM_BLOCKS_ALLOCATED, 100.0 * MEM_CURRENT_ALLOCATIONS / MEM_TOTAL_ALLOCATIONS);
 	ds_changeColor(prevColor);
 }

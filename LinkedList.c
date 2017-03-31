@@ -102,13 +102,13 @@ Prints out the LinkedList to the console window.
 */
 void ll_print(const struct LinkedList* const list)
 {
-	printf_s("%s%zu%s", "List Size: ", list->size, " { ");
+	printf("%s%zu%s", "List Size: ", list->size, " { ");
 
 	for (const Node *iter = list->root; iter != NULL; iter = iter->next)
 	{
-		printf_s("%s", list->toString(iter->data));
+		printf("%s", list->toString(iter->data));
 		if (iter->next != NULL)
-			printf_s(", ");
+			printf(", ");
 	}
 
 	printf(" }\n");

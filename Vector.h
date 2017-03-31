@@ -73,6 +73,8 @@ void vect_pop_front(struct Vector* const vect);
 void vect_append_vect(const struct Vector* const vect, const struct Vector* const data);
 /* Append data from an array to the end of this Vector. */
 void vect_append_array(const struct Vector* const vect, const void** const data, const size_t size);
+/* Grows the underlying array to be able to store at least `min_size` elements. */
+void vect_grow_to(struct Vector* const vect, const size_t min_size);
 /* Removes all elements from the Vector while preserving the capacity. */
 void vect_clear(struct Vector* const vect);
 /* Sorts elements inside the Vector in descending order. */

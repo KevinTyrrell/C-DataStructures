@@ -119,12 +119,12 @@ void rbt_print(const struct RedBlackTree* const tree)
 	struct LinkedList* const queue = LinkedList_new(NULL, NULL);
 	/* Add the root to get us started. */
 	ll_push_back(queue, tree->root);
-	printf_s("%s%zu\n", "Red Black Tree - Size: ", tree->size);
+	printf("%s%zu\n", "Red Black Tree - Size: ", tree->size);
 
 	for (int currentHeight = rbt_height(tree), row = 1; row <= currentHeight; row++)
 	{
 		/* Initial line spacing. */
-		printf_s("%.*s", -2 + (int)pow(2, (double)currentHeight - (double)row + 1), SPACING);
+		printf("%.*s", -2 + (int)pow(2, (double)currentHeight - (double)row + 1), SPACING);
 
 		/* Enter the row of the tree. */
 		for (unsigned int nodes = queue->size; nodes > 0; nodes--)
@@ -140,16 +140,16 @@ void rbt_print(const struct RedBlackTree* const tree)
 			if (set != NULL)
 			{
 				prevColor = ds_changeColor(current->color == RED ? COLOR_RED : COLOR_BLACK);
-				printf_s(" %c ", (char)CHAR_NULL);
+				printf(" %c ", (char)CHAR_NULL);
 			}
 			else
-				printf_s("%.3s", tree->toString(set));
+				printf("%.3s", tree->toString(set));
 
 			if (prevColor != 0)
 				ds_changeColor(prevColor);
 			/* If another Node comes after this one, add spaces for it. */
 			if (nodes > 1)
-				printf_s("%.*s", -1 + (int)pow(2, (double)currentHeight - (double)row + 2), SPACING);
+				printf("%.*s", -1 + (int)pow(2, (double)currentHeight - (double)row + 2), SPACING);
 
 			/* Setup the children of this Node so we know what's underneath us.
 			If we are on the bottom floor of the tree, there's not another row to be added. */
@@ -168,18 +168,18 @@ void rbt_print(const struct RedBlackTree* const tree)
 		if (row != currentHeight)
 		{
 			/* Initial line spacing. */
-			printf_s("\n%.*s", -1 + (int)pow(2, (double)currentHeight - (double)row), SPACING);
+			printf("\n%.*s", -1 + (int)pow(2, (double)currentHeight - (double)row), SPACING);
 			for (size_t i = 0, sets = queue->size / 2; i < sets; i++)
 			{
 				/* Print out the  /     \  that go to the row below. */
-				printf_s("%c%.*s%c", CHAR_POINTER_L,
+				printf("%c%.*s%c", CHAR_POINTER_L,
 					(int)pow(2, (double)currentHeight - (double)row + 1) - 3, SPACING, CHAR_POINTER_R);
 				/* Add spacing for the next set. */
 				if (i + 1 != sets)
-					printf_s("%.*s", (int)pow(2, (double)currentHeight - (double)row + 1) + 1, SPACING);
+					printf("%.*s", (int)pow(2, (double)currentHeight - (double)row + 1) + 1, SPACING);
 			}
 		}
-		printf_s("\n");
+		printf("\n");
 	}
 
 	ll_destroy(queue);

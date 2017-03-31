@@ -8,17 +8,16 @@
 typedef struct Vector Vector;
 
 /* Convenience functions. */
-bool vect_full(const Vector* const vect);
-void vect_grow(const Vector* const vect);
-void vect_grow_to(Vector* const vect, const size_t size);
-void vect_swap(const Vector* const vect, const unsigned int i, const unsigned int h);
-void ptr_swap(const void** const v1, const void** const v2);
-void vect_merge_sort(const Vector* const vect, const unsigned int start, const size_t size);
-void vect_quick_sort(const struct Vector* const vect, const unsigned int index, const size_t size);
-void vect_shift(Vector* const vect, const unsigned int start, const unsigned int stop, const bool leftwards);
-unsigned int vect_index(const Vector* const vect, const unsigned int index);
-unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const unsigned int upper);
-bool vect_in_domain(const Vector* const vect, const unsigned int arr_index);
+static bool vect_full(const Vector* const vect);
+static void vect_grow(const Vector* const vect);
+static void vect_swap(const Vector* const vect, const unsigned int i, const unsigned int h);
+static void ptr_swap(const void** const v1, const void** const v2);
+static void vect_merge_sort(const Vector* const vect, const unsigned int start, const size_t size);
+static void vect_quick_sort(const struct Vector* const vect, const unsigned int index, const size_t size);
+static void vect_shift(Vector* const vect, const unsigned int start, const unsigned int stop, const bool leftwards);
+static unsigned int vect_index(const Vector* const vect, const unsigned int index);
+static unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const unsigned int upper);
+static bool vect_in_domain(const Vector* const vect, const unsigned int arr_index);
 
 /* Structure to assist in looping through Vector. */
 typedef struct
@@ -28,10 +27,10 @@ typedef struct
 } Iterator;
 
 /* Iterator functionality. */
-void iter_next(Iterator* const iter);
-void iter_prev(Iterator* const iter);
-bool iter_has_next(const Iterator* const iter);
-bool iter_has_prev(const Iterator* const iter);
+static void iter_next(Iterator* const iter);
+static void iter_prev(Iterator* const iter);
+static bool iter_has_next(const Iterator* const iter);
+static bool iter_has_prev(const Iterator* const iter);
 
 /* Constructor function. */
 struct Vector* Vector_new(int(*compare)(const void*, const void*), char*(*toString)(const void*))
@@ -143,11 +142,11 @@ void** vect_array(const struct Vector* const vect)
  */
 void vect_print(const struct Vector* const vect)
 {
-	printf_s("%c", '[');
+	printf("%c", '[');
 	for (unsigned int i = 0; i < vect->size; i++)
-		printf_s("%s%s", vect->toString(vect_at(vect, i)),
+		printf("%s%s", vect->toString(vect_at(vect, i)),
 			i + 1 < vect->size ? ", " : "");
-	printf_s("]\n");
+	printf("]\n");
 }
 
 /*
@@ -165,23 +164,23 @@ void vect_debug_print(const struct Vector* const vect)
 	unsigned int iter = 0;
 	for (unsigned int i = 0; i < rows; i++)
 	{
-		printf_s("     ");
+		printf("     ");
 		const WORD oldColor = ds_changeColor(elementColor);
 		for (unsigned int h = 0; h < INDEXES_PER_ROW && iter < vect->capacity; h++)
 		{
 			const void* const value = vect->table[iter++];
-			printf_s(" %.1s  ", value != NULL ? vect->toString(value) : ".");
+			printf(" %.1s  ", value != NULL ? vect->toString(value) : ".");
 		}
 		ds_changeColor(oldColor);
 
-		printf_s("\nR%u   ", i % 10);
+		printf("\nR%u   ", i % 10);
 		/* Print indexes at the bottom of the row to indicate where we are in the array. */
 		for (unsigned int h = 0; h < INDEXES_PER_ROW; h++)
-			printf_s("[%u] ", h % 10);
-		printf_s("\n");
+			printf("[%u] ", h % 10);
+		printf("\n");
 	}
 
-	printf_s("Vector Status -- Size: %zu, Capacity: %zu, Start: %u, End: %u.\n", vect_size(vect), vect->capacity, vect->start, vect->end);
+	printf("Vector Status -- Size: %zu, Capacity: %zu, Start: %u, End: %u.\n", vect_size(vect), vect->capacity, vect->start, vect->end);
 }
 
 /*
@@ -460,22 +459,22 @@ void vect_grow(const Vector* const vect)
 }
 
 /*
-* Grows the underlying array, guaranteeing that the new capacity
-* is equal to or greater than the parameter `size`.
-* The Vector's capacity will always be of the form c = 10 * 2^n
-* Ω(n), Θ(n), O(n)
-*/
-void vect_grow_to(Vector* const vect, const size_t size)
+ * Grows the underlying array to be able to store at least `min_size` elements.
+ * The Vector's capacity will always be of the form `capacity = 10 * 2^n`
+ * Ω(n), Θ(n), O(n)
+ */
+void vect_grow_to(Vector* const vect, const size_t min_size)
 {
+	if (min_size <= vect->capacity)
+		return;
 	/* 
 	 * Solve for the expanded capacity.
 	 * The Vector only expands in increments of 10 * 2^n.
-	 * Expanded capacities must be of the form of c = 10
+	 * Ex. `min_size` of 73 means expanded capacity of 80.
 	 */
-	const size_t expanded_capacity = DEFAULT_INITIAL_CAPACITY 
-		* (unsigned int)pow((double)VECTOR_GROW_AMOUNT, round(
-		log((double)size / DEFAULT_INITIAL_CAPACITY) 
-			/ log((double)VECTOR_GROW_AMOUNT)) + 1);
+	const size_t expanded_capacity = DEFAULT_INITIAL_CAPACITY * 
+		(unsigned int)pow(VECTOR_GROW_AMOUNT, 1 + floor(
+			log((double)min_size / DEFAULT_INITIAL_CAPACITY) / log(VECTOR_GROW_AMOUNT)));
 
 	const void** const expanded_table = ds_calloc(expanded_capacity, sizeof(void*));
 	for (unsigned int i = 0, len = vect_size(vect); i < len; i++)
