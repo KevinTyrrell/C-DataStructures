@@ -486,7 +486,7 @@ void vect_grow_to(Vector* const vect, const size_t min_size)
 	vect->table = expanded_table;
 	vect->capacity = expanded_capacity;
 	vect->start = 0;
-	vect->end = vect_size(vect) - 1;
+	vect->end = !vect_empty(vect) ? vect_size(vect) - 1 : 0;
 }
 
 /*
