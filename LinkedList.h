@@ -10,6 +10,7 @@ Version: 2.0
 #include <time.h>
 
 #include "Tools.h"
+#include "Vector.h"
 
 /* LinkedList structure. */
 struct LinkedList
@@ -54,6 +55,9 @@ bool ll_empty(const struct LinkedList* const list);
 struct LinkedList* ll_clone(const struct LinkedList* const list);
 /* Prints the LinkedList to the console window. */
 void ll_print(const struct LinkedList* const list);
+// TODO:
+void** ll_array(const struct LinkedList* const list);
+struct Vector* ll_vector(const struct LinkedList* const list);
 
 /* ~~~~~ Mutators ~~~~~ */
 

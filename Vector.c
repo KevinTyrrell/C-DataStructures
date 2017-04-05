@@ -45,7 +45,7 @@ struct Vector* Vector_new(int(*compare)(const void*, const void*), char*(*toStri
 
 /*
  * Returns the value at the given index.
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 void* vect_at(const struct Vector* const vect, const unsigned int index)
 {
@@ -64,7 +64,7 @@ void* vect_at(const struct Vector* const vect, const unsigned int index)
 
 /*
  * Returns the value at the front of the Vector.
- * Ω(n), Θ(n), O(n)
+ * Θ(n)
  */
 void* vect_front(const struct Vector* const vect)
 {
@@ -79,7 +79,7 @@ void* vect_front(const struct Vector* const vect)
 
 /*
  * Returns the value at the end of the Vector.
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 void* vect_back(const struct Vector* const vect)
 {
@@ -94,7 +94,7 @@ void* vect_back(const struct Vector* const vect)
 
 /*
  * Returns the size of the Vector.
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 size_t vect_size(const struct Vector* const vect)
 {
@@ -112,7 +112,7 @@ bool vect_empty(const struct Vector* const vect)
 
 /*
  * Returns true if the Vector contains the provided element.
- * Ω(1), Θ(1), O(1)
+ * Θ(n)
  */
 bool vect_contains(const struct Vector* const vect, const void* const data)
 {
@@ -125,7 +125,7 @@ bool vect_contains(const struct Vector* const vect, const void* const data)
 /*
  * Returns an array of all elements inside the Vector.
  * Remember to call `free` on the dynamically allocated array.
- * Ω(n), Θ(n), O(n)
+ * Θ(n)
  */
 void** vect_array(const struct Vector* const vect)
 {
@@ -138,7 +138,7 @@ void** vect_array(const struct Vector* const vect)
 
 /*
  * Prints out the contents of the Vector using the toString function.
- * Ω(n), Θ(n), O(n)
+ * Θ(n)
  */
 void vect_print(const struct Vector* const vect)
 {
@@ -151,7 +151,7 @@ void vect_print(const struct Vector* const vect)
 
 /*
  * Prints out the internal structure of the inner array.
- * Ω(n), Θ(n), O(n)
+ * Θ(n)
  */
 void vect_debug_print(const struct Vector* const vect)
 {
@@ -185,7 +185,7 @@ void vect_debug_print(const struct Vector* const vect)
 
 /*
  * Replaces an element in the Vector at a given index with a specified value.
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 void vect_assign(const struct Vector* const vect, const unsigned int index, const void* const data)
 {
@@ -205,7 +205,7 @@ void vect_assign(const struct Vector* const vect, const unsigned int index, cons
 
 /*
  * Inserts the given element at the provided index.
- * Ω(1), Θ(n), O(n)
+ * Ω(1), O(n)
  */
 void vect_insert(struct Vector* const vect, const unsigned int index, const void* const data)
 {
@@ -241,9 +241,9 @@ void vect_insert(struct Vector* const vect, const unsigned int index, const void
 }
 
 /*
-* Attempts to remove a provided element from the Vector, if it exists.
-* Ω(n), Θ(n), O(n)
-*/
+ * Attempts to remove a provided element from the Vector, if it exists.
+ * Θ(n)
+ */
 bool vect_remove(struct Vector* const vect, const void* const data)
 {
 	if (data == NULL)
@@ -266,7 +266,7 @@ bool vect_remove(struct Vector* const vect, const void* const data)
 
 /*
  * Erases an element from the Vector at a given index.
- * Ω(1), Θ(n), O(n)
+ * Ω(1), O(n)
  */
 void vect_erase(struct Vector* const vect, const unsigned int index)
 {
@@ -297,7 +297,7 @@ void vect_erase(struct Vector* const vect, const unsigned int index)
 
 /*
  * Inserts the given element at the end of the Vector.
- * Ω(1), Θ(1), O(n)
+ * Ω(1), O(n)
  */
 void vect_push_back(Vector * const vect, const void * const data)
 {
@@ -322,7 +322,7 @@ void vect_push_back(Vector * const vect, const void * const data)
 
 /*
  * Inserts the given element at the front of the Vector.
- * Ω(1), Θ(1), O(n)
+ * Ω(1), O(n)
  */
 void vect_push_front(Vector * const vect, const void * const data)
 {
@@ -347,7 +347,7 @@ void vect_push_front(Vector * const vect, const void * const data)
 
 /*
  * Removes the element at the end of the Vector.
- * Ω(1), Θ(1), O(n)
+ * Θ(1)
  */
 void vect_pop_back(struct Vector* const vect)
 {
@@ -365,7 +365,7 @@ void vect_pop_back(struct Vector* const vect)
 
 /*
 * Removes the element at the front of the Vector.
-* Ω(1), Θ(1), O(n)
+* Θ(1)
 */
 void vect_pop_front(struct Vector* const vect)
 {
@@ -383,7 +383,7 @@ void vect_pop_front(struct Vector* const vect)
 
 /*
  * Append data from another Vector to the end of this Vector.
- * Ω(n), Θ(n), O(n)
+ * Θ(n)
  */
 void vect_append_vect(const struct Vector* const vect, const struct Vector* const data)
 {
@@ -396,7 +396,7 @@ void vect_append_vect(const struct Vector* const vect, const struct Vector* cons
 
 /*
 * Append data from an array to the end of this Vector.
-* Ω(n), Θ(n), O(n)
+* Θ(n)
 */
 void vect_append_array(const struct Vector* const vect, const void** const data, const size_t size)
 {
@@ -409,7 +409,7 @@ void vect_append_array(const struct Vector* const vect, const void** const data,
 
 /*
  * Removes all elements from the Vector while preserving the capacity.
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 void vect_clear(struct Vector* const vect)
 {
@@ -421,8 +421,7 @@ void vect_clear(struct Vector* const vect)
 /*
  * Sorts elements inside the Vector in ascending order.
  * Uses the `compare` function provided to the Vector.
- * Implementation uses Quick Sort.
- * Ω(n log(n)), Θ(n log(n)), O(n^2)
+ * See: `vect_quick_sort`
  */
 void vect_sort(const struct Vector* const vect)
 {
@@ -430,8 +429,24 @@ void vect_sort(const struct Vector* const vect)
 }
 
 /*
+ * Shuffles the elements inside the Vector randomly.
+ * Utilizes the Fisher-Yates Shuffling Algorithm:
+ * (https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle)
+ * Θ(n)
+ */
+void vect_shuffle(const struct Vector* const vect)
+{
+	const size_t size = vect_size(vect);
+	for (unsigned int i = size - 1; i > 0; i--)
+	{
+		const unsigned int swap_location = rand_limit(i + 1);
+		vect_swap(vect, i, swap_location);
+	}
+}
+
+/*
  * De-constructor function. 
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 void vect_destroy(const struct Vector* const vect)
 {
@@ -441,7 +456,7 @@ void vect_destroy(const struct Vector* const vect)
 
 /*
  * Returns true if the Vector is full.
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 bool vect_full(const Vector* const vect)
 {
@@ -450,7 +465,7 @@ bool vect_full(const Vector* const vect)
 
 /*
  * Grows the underlying array by a factor of `VECTOR_GROW_AMOUNT`.
- * Ω(n), Θ(n), O(n)
+ * Θ(n)
  */
 void vect_grow(const Vector* const vect)
 {
@@ -461,7 +476,7 @@ void vect_grow(const Vector* const vect)
 /*
  * Grows the underlying array to be able to store at least `min_size` elements.
  * The Vector's capacity will always be of the form `capacity = 10 * 2^n`
- * Ω(n), Θ(n), O(n)
+ * Θ(n)
  */
 void vect_grow_to(Vector* const vect, const size_t min_size)
 {
@@ -491,7 +506,7 @@ void vect_grow_to(Vector* const vect, const size_t min_size)
 
 /*
 * Swap function for sorting and shifting algorithms.
-* Ω(1), Θ(1), O(1)
+* Θ(1)
 */
 void vect_swap(const Vector* const vect, const unsigned int i, const unsigned int h)
 {
@@ -502,7 +517,7 @@ void vect_swap(const Vector* const vect, const unsigned int i, const unsigned in
 
 /*
 * Swap function for sorting and shifting algorithms.
-* Ω(1), Θ(1), O(1)
+* Θ(1)
 */
 void ptr_swap(const void** const v1, const void** const v2)
 {
@@ -513,7 +528,7 @@ void ptr_swap(const void** const v1, const void** const v2)
 
 /*
  * Converts regular indexes from 0->(capacity - 1) into indexes that wrap around the Vector. 
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 unsigned int vect_index(const Vector* const vect, const unsigned int index)
 {
@@ -522,7 +537,7 @@ unsigned int vect_index(const Vector* const vect, const unsigned int index)
 
 /*
  * Given a value and a change in that value (dX), find the sum and wrap it between lower and upper.
- * Ω(n), Θ(n), O(n)
+ * Θ(n)
  */
 unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const unsigned int upper)
 {
@@ -543,6 +558,7 @@ unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const 
 
 /*
  * Returns true if the given array index is within start and end.
+ * Θ(1)
  */
 bool vect_in_domain(const Vector* const vect, const unsigned int arr_index)
 {
@@ -555,6 +571,10 @@ bool vect_in_domain(const Vector* const vect, const unsigned int arr_index)
 	return arr_index >= vect->start || arr_index <= vect->end;
 }
 
+/*
+ * Sorts the Vector in ascending order using the Quicksort algorithm.
+ * Ω(n * log(n)), O(n^2)
+ */
 void vect_quick_sort(const Vector* const vect, const unsigned int index, const size_t size)
 {
 	/* Array size of 1 means the partition is sorted. */
@@ -587,7 +607,9 @@ void vect_quick_sort(const Vector* const vect, const unsigned int index, const s
 }
 
 /*
- * See: vect_sort.
+ * Sorts the Vector in ascending order using the Mergesort Algorithm.
+ * An addition N space of memory will be needed for the merge step.
+ * Θ(n * log(n))
  */
 void vect_merge_sort(const Vector* const vect, const unsigned int start, const size_t size)
 {
@@ -635,7 +657,7 @@ void vect_merge_sort(const Vector* const vect, const unsigned int start, const s
  * Shifts the elements in the Vector left or right based on `leftwards`.
  * The shift will begin from `start` and the furthest element will be moved to `stop`.
  * Shifts may leave holes in the array and will not update `start` and `end` pointers of the Vector.
- * Ω(n), Θ(n), O(n)
+ * Θ(n)
  */
 void vect_shift(Vector* const vect, const unsigned int start, const unsigned int stop, const bool leftwards)
 {
@@ -658,7 +680,7 @@ void vect_shift(Vector* const vect, const unsigned int start, const unsigned int
 
 /*
  * Moves the Iterator forward one index.
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 void iter_next(Iterator* const iter)
 {
@@ -667,7 +689,7 @@ void iter_next(Iterator* const iter)
 
 /*
  * Moves the Iterator backward one index.
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 void iter_prev(Iterator* const iter)
 {
@@ -676,7 +698,7 @@ void iter_prev(Iterator* const iter)
 
 /*
  * Returns true if the Iterator can move forward.
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 bool iter_has_next(const Iterator* const iter)
 {
@@ -685,7 +707,7 @@ bool iter_has_next(const Iterator* const iter)
 
 /*
 * Returns true if the Iterator can move backwards.
-* Ω(1), Θ(1), O(1)
+* Θ(1)
 */
 bool iter_has_prev(const Iterator* const iter)
 {

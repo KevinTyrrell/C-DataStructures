@@ -8,6 +8,7 @@ Version: 2.0
 #pragma once
 
 #include "Tools.h"
+#include "C-Random/Random.h"
 
 #include <math.h>
 
@@ -79,6 +80,8 @@ void vect_grow_to(struct Vector* const vect, const size_t min_size);
 void vect_clear(struct Vector* const vect);
 /* Sorts elements inside the Vector in descending order. */
 void vect_sort(const struct Vector* const vect);
+/* Shuffles the elements inside the Vector randomly. */
+void vect_shuffle(const struct Vector* const vect);
 
 /* ~~~~~ De-constructors ~~~~~ */
 

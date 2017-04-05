@@ -1,5 +1,6 @@
 
 #include "Tools.h"
+#include <math.h>
 
 #define DS_LIGHT_TEAL 11
 #define DS_LIGHT_RED 12
