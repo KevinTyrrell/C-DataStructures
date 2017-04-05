@@ -1,0 +1,3 @@
+[submodule "C-Random"]
+	path = C-Random
+	url = https://github.com/KevinTyrrell/C-Random
