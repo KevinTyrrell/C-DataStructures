@@ -2,33 +2,19 @@
 /*
 Author: Kevin Tyrrell
 Date: 7/21/2016
-Version: 2.0
+Version: 3.0
 */
 
 #pragma once
 
+#include "Tools.h"
+#include "C-Random/Random.h"
+
 #include <time.h>
 
-#include "Tools.h"
-#include "Vector.h"
-
-/* LinkedList structure. */
-struct LinkedList
-{
-	struct ll_Node *root, *tail;
-	size_t size;
-	/* Pointer functions */
-	bool(*equals)(void*, void*);
-	char*(*toString)(void*);
-	bool thread_lock;
-};
-
-/* Node structure. */
-struct ll_Node
-{
-	void *data;
-	struct ll_Node *next, *prev;
-};
+/* Private structures. */
+typedef struct LinkedList LinkedList;
+typedef struct ll_Iterator ll_Iterator;
 
 /* ~~~~~ Constructors ~~~~~ */
 
@@ -37,51 +23,76 @@ Must pass in two function pointers.
 The first compares two data elements and returns true if they are the same.
 The second function must return the String representation of the data.
 */
-struct LinkedList* LinkedList_new(bool(*equals)(void*, void*), char*(*toString)(void*));
+LinkedList* LinkedList_new(int(*compare)(const void*, const void*),
+	char*(*toString)(const void*));
 
 /* ~~~~~ Accessors ~~~~~ */
 
-/* Returns the data at the front of the LinkedList. */
-void* ll_front(const struct LinkedList* const list);
-/* Returns the data at the end of the LinkedList. */
-void* ll_back(const struct LinkedList* const list);
-/* Returns the data at the specified position in the LinkedList. */
-void* ll_at(const struct LinkedList* const list, const size_t index);
-/* Returns true if the LinkedList contains the specified data. */
-bool ll_contains(const struct LinkedList* const list, const void* const data);
-/* Returns true if the LinkedList is empty. */
-bool ll_empty(const struct LinkedList* const list);
-/* Returns a shallow copy of this LinkedList. */
-struct LinkedList* ll_clone(const struct LinkedList* const list);
-/* Prints the LinkedList to the console window. */
-void ll_print(const struct LinkedList* const list);
-// TODO:
-void** ll_array(const struct LinkedList* const list);
-struct Vector* ll_vector(const struct LinkedList* const list);
+/* Returns the element at the front of the list. */
+void* ll_front(const LinkedList* const list);
+/* Returns the element at the back of the list. */
+void* ll_back(const LinkedList* const list);
+/* Returns the element at the specified index in the list. */
+void* ll_at(const LinkedList* const list, const size_t index);
+/* Returns true if the list contains the specified element. */
+bool ll_contains(const LinkedList* const list, const void* const data);
+/* Returns the amount of elements inside the list. */
+size_t ll_size(const LinkedList* const list);
+/* Returns true if the list is empty. */
+bool ll_empty(const LinkedList* const list);
+/* Returns a shallow copy of the list. */
+LinkedList* ll_clone(const LinkedList* const list);
+/* Prints the list to the console window. */
+void ll_print(const LinkedList* const list);
+/* Returns an array of all elements inside the list. */
+void** ll_array(const LinkedList* const list);
 
 /* ~~~~~ Mutators ~~~~~ */
 
-/* Inserts data at the front of the LinkedList. */
-void ll_push_front(struct LinkedList* const list, const void* const data);
-/* Inserts data at the end of the LinkedList. */
-void ll_push_back(struct LinkedList* const list, const void* const data);
-/* Overwrites a value in the LinkedList at a given index. */
-void ll_assign(const struct LinkedList* const list, const size_t index, const void* const data);
-/* Inserts data at a specific position in the LinkedList. */
-void ll_insert(struct LinkedList* const list, const size_t index, const void* const data);
-/* Removes the data at the front of the LinkedList and returns it. */
-void ll_pop_front(struct LinkedList* const list);
-/* Removes the data at the end of the LinkedList and returns it. */
-void ll_pop_back(struct LinkedList* const list);
-/* Removes the first occurrence of the data from the LinkedList, if it exists. */
-bool ll_remove(struct LinkedList* const list, const void* const data);
-/* Removes the data at the specified position in the LinkedList. */
-void ll_erase(struct LinkedList* const list, const size_t index);
-/* Removes all data inside the LinkedList. */
-void ll_clear(struct LinkedList* const list);
-/* Randomizes the position of all elements inside the LinkedList. */
-void ll_shuffle(const struct LinkedList* const list);
+/* Inserts an element at the front of the list. */
+void ll_push_front(LinkedList* const list, const void* const data);
+/* Appends an element at the end of the list. */
+void ll_push_back(LinkedList* const list, const void* const data);
+/* Overwrites an element in the list at a given index. */
+void ll_assign(const LinkedList* const list, const size_t index, const void* const data);
+/* Inserts an element at a specific position in the list. */
+void ll_insert(LinkedList* const list, const unsigned int index, const void* const data);
+/* Removes an element at the front of the list. */
+void ll_pop_front(LinkedList* const list);
+/* Removes an element at the end of the list. */
+void ll_pop_back(LinkedList* const list);
+/* Removes the first occurrence of an element from the list. */
+bool ll_remove(LinkedList* const list, const void* const data);
+/* Removes the element at the specified position in the list. */
+void ll_erase(LinkedList* const list, const size_t index);
+/* Removes all elements inside the list. */
+void ll_clear(LinkedList* const list);
+/* Sorts elements inside the list in descending order. */
+void ll_sort(LinkedList* const list);
+/* Shuffles the elements in the list pseudo-randomly. */
+void ll_shuffle(LinkedList* const list);
 
 /* ~~~~~ De-constructors ~~~~~ */
 
-void ll_destroy(const struct LinkedList* const list);
+void ll_destroy(LinkedList* const list);
+
+/* ~~~~~ Iterator ~~~~~ */
+
+/* Constructor function. */
+ll_Iterator* ll_iter(const LinkedList* const list, const bool front);
+/* Returns the iterator's current element and advances it forward. */
+void* ll_iter_next(ll_Iterator* const iter);
+/* Returns the iterator's current element and advances it backward. */
+void* ll_iter_prev(ll_Iterator* const iter);
+/* Returns true if the iterator has a next element. */
+bool ll_iter_has_next(const ll_Iterator* const iter);
+/* Returns true if the iterator has a previous element. */
+bool ll_iter_has_prev(const ll_Iterator* const iter);
+/* Returns the index at which this iterator is over. */
+unsigned int ll_iter_index(const ll_Iterator* const iter);
+/* Inserts an element at the iterator's current position. */
+void ll_iter_insert(ll_Iterator* const iter, const void* const data);
+/* Removes the last iterated element from the list. */
+void ll_iter_remove(ll_Iterator* const iter);
+/* De-constructor function. */
+void ll_iter_destroy(const ll_Iterator* const iter);

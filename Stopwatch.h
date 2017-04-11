@@ -1,13 +1,18 @@
+
+/*
+Author: Kevin Tyrrell
+Date: 3/07/2016
+Version: 2.0
+*/
+
 #pragma once
 
 #include "Tools.h"
 
 #include <time.h>
 
-struct Stopwatch
-{
-	clock_t *start, *end;
-};
+/* Private structures. */
+typedef struct Stopwatch Stopwatch;
 
 /* ~~~~~ Constructors ~~~~~ */
 
@@ -15,22 +20,20 @@ struct Stopwatch* Stopwatch_new();
 
 /* ~~~~~ Accessors ~~~~~ */
 
-/* Returns the elapsed time taken by the Stopwatch. */
-clock_t sw_elapsed(const struct Stopwatch* const sw);
-/* Returns the elapsed time taken by the Stopwatch in milliseconds. */
-unsigned long sw_elapsed_millis(const struct Stopwatch * const sw);
-/* Returns the difference of time between the given two Stopwatches. */
-clock_t sw_difference(const struct Stopwatch* const sw1, const struct Stopwatch* const sw2);
+/* Returns the amount of time clocked in milliseconds. */
+clock_t sw_elapsed(const Stopwatch* const sw);
+/* Returns the difference between two stopwatches in milliseconds. */
+clock_t sw_difference(const Stopwatch* const sw1, const Stopwatch* const sw2);
 
 /* ~~~~~ Mutators ~~~~~ */
 
-/* Starts the Stopwatch. */
-void sw_start(struct Stopwatch* const sw);
-/* Stops the Stopwatch and returns the amount of clocks taken. */
-clock_t sw_stop(struct Stopwatch* const sw);
-/* Resets this Stopwatch to its' default state. */
-void sw_reset(struct Stopwatch* const sw);
+/* Starts the stopwatch. */
+void sw_start(Stopwatch* const sw);
+/* Ends the stopwatch and returns the elapsed time in milliseconds. */
+clock_t sw_stop(Stopwatch* const sw);
+/* Resets the stopwatch to its original state. */
+void sw_reset(Stopwatch* const sw);
 
 /* ~~~~~ De-constructors ~~~~~ */
 
-void sw_destroy(const struct Stopwatch* const sw);
+void sw_destroy(const Stopwatch* const sw);

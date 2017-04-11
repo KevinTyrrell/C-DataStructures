@@ -1,20 +1,30 @@
-﻿#include "Stopwatch.h"
+﻿
+#include "Stopwatch.h"
 
 #define SW_MSG_NOT_STARTED "The Stopwatch must have been started in order to perform this operation!"
 #define SW_MSG_ALREADY_RUNNING "Unable to perform this operation while the Stopwatch is running! "
 #define SW_MSG_ALREADY_ENDED "The Stopwatch has already been ended!"
 
-/* Local typedef for convenience. */
-typedef struct Stopwatch Stopwatch;
+#define TO_MILLISECONDS 1000
+
+/* Stopwatch structure. */
+struct Stopwatch
+{
+	clock_t *start, *end;
+};
 
 /* Constructor function. */
-struct Stopwatch * Stopwatch_new()
+Stopwatch* Stopwatch_new()
 {
 	Stopwatch* const sw = ds_calloc(1, sizeof(Stopwatch));
 	return sw;
 }
 
-/* Returns the elapsed time taken by the Stopwatch. */
+/*
+ * Returns the amount of time clocked in milliseconds.
+ * The watch must have been started and stopped before calling this function.
+ * Θ(1)
+ */
 clock_t sw_elapsed(const Stopwatch* const sw)
 {
 	bool error = true;
@@ -23,32 +33,28 @@ clock_t sw_elapsed(const Stopwatch* const sw)
 	else if (sw->end == NULL)
 		ds_error(SW_MSG_ALREADY_RUNNING);
 	else error = false;
-	if (error) return 0;
+	if (error) return -1;
 	
-	return *sw->end - *sw->start;
+	return TO_MILLISECONDS * (*sw->end - *sw->start) / CLOCKS_PER_SEC;
 }
 
-/* Returns the elapsed time taken by the Stopwatch in milliseconds. */
-unsigned long sw_elapsed_millis(const Stopwatch* const sw)
+/*
+ * Returns the difference between two stopwatches in milliseconds.
+ * The duration returned will be positive if the first watch
+ * clocked more time than the second, and vice-versa.
+ * Both watches must be started and stopped before calling this function.
+ * Θ(1)
+ */
+clock_t sw_difference(const Stopwatch* const sw1, const Stopwatch* const sw2)
 {
-	return 1000 * sw_elapsed(sw) / CLOCKS_PER_SEC;
-}
-
-/* Returns the difference of time between the given two Stopwatches. */
-clock_t sw_difference(const Stopwatch * const sw1, const Stopwatch * const sw2)
-{
-	bool error = true;
-	if (sw1->start == NULL || sw2->start == NULL)
-		ds_error(SW_MSG_NOT_STARTED);
-	else if (sw2->end == NULL || sw2->end == NULL)
-		ds_error(SW_MSG_ALREADY_RUNNING);
-	else error = false;
-	if (error) return 0;
-
 	return sw_elapsed(sw1) - sw_elapsed(sw2);
 }
 
-/* Starts the Stopwatch. */
+/*
+ * Starts the stopwatch.
+ * A stopwatch can only be started again after being reset.
+ * Θ(1)
+ */
 void sw_start(struct Stopwatch * const sw)
 {
 	if (sw->start != NULL)
@@ -60,7 +66,12 @@ void sw_start(struct Stopwatch * const sw)
 	*sw->start = clock();
 }
 
-/* Stops the Stopwatch and returns the amount of clocks taken. */
+/*
+ * Ends the stopwatch and returns the elapsed time in milliseconds.
+ * The watch should be started before calling this function.
+ * For the return value, see: Elapsed.
+ * Θ(1)
+ */
 clock_t sw_stop(struct Stopwatch * const sw)
 {
 	bool error = true;
@@ -69,15 +80,18 @@ clock_t sw_stop(struct Stopwatch * const sw)
 	else if (sw->end != NULL)
 		ds_error(SW_MSG_ALREADY_ENDED);
 	else error = false;
-	if (error) return 0;
+	if (error) return -1;
 
 	sw->end = ds_malloc(sizeof(clock_t));
 	*sw->end = clock();
 	return sw_elapsed(sw);
 }
 
-/* Resets this Stopwatch to its' default state. */
-void sw_reset(struct Stopwatch * const sw)
+/*
+ * Resets the stopwatch to its original state.
+ * Θ(1)
+ */
+void sw_reset(Stopwatch* const sw)
 {
 	if (sw->start == NULL)
 	{

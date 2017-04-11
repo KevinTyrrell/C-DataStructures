@@ -1,9 +1,9 @@
 
 /*
- * Author: Kevin Tyrrell
- * Date: 8/18/2016
- * Version: 2.1
- */
+* Author: Kevin Tyrrell
+* Date: 8/18/2016
+* Version: 2.1
+*/
 
 #pragma once
 
@@ -53,8 +53,8 @@ struct map_Node
 * The first parameter for the function is the key and the second is the value.
 */
 struct HashMap* HashMap_new(unsigned int(*hash)(const void* const),
-	bool(*equals)(const void* const, const void* const), 
-		char*(*toString)(const void* const, const void* const));
+	bool(*equals)(const void* const, const void* const),
+	char*(*toString)(const void* const, const void* const));
 
 /* ~~~~~ Accessors ~~~~~ */
 

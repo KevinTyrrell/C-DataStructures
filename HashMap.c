@@ -7,17 +7,17 @@ typedef struct map_Entry map_Entry;
 typedef struct map_Node Node;
 
 /* Constructor functions. */
-map_Entry* KeySet_new(const void* const key, const void* value);
-Node* Node_new(const map_Entry* const set);
-Node** Table_new(const size_t capacity);
+static map_Entry* KeySet_new(const void* const key, const void* value);
+static Node* Node_new(const map_Entry* const set);
+static Node** Table_new(const size_t capacity);
 
 /* Deconstructor functions. */
 /* If deep, destroy all members as well. */
-void Node_destroy(const Node* const node, const bool deep);
+static void Node_destroy(const Node* const node, const bool deep);
 
 /* Convenience functions. */
-map_Entry* map_search(const Map* const map, const void* const key);
-size_t map_tableSize(const Map* const map);
+static map_Entry* map_search(const Map* const map, const void* const key);
+static size_t map_tableSize(const Map* const map);
 unsigned int map_modulus(const unsigned int operandL, const unsigned int operandR);
 bool map_powerOf(const unsigned int n, const unsigned int base);
 
