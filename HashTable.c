@@ -239,7 +239,7 @@ float table_collision_rate(const HashTable* const table)
 		if (table->buckets[i] != NULL)
 			counter++;
 
-	return (size - counter) / (float)size;
+	return 1 - (float)(counter - 1) / (size - 1);
 }
 
 /*
@@ -259,33 +259,33 @@ void table_put(HashTable* const table, const void* const key, const void* const 
 
 	/* If the table is at capacity, grow it dynamically. */
 	if (table_full_load(table))
-		table_grow(table, table_capacity(table) * GROW_FACTOR);
+		table_grow(table, table_size(table) + 1);
 
-	table_Entry* const inserted = table_Entry_new(key, value);
 	/* Hash the key and locate the bucket that will contain this entry. */
-	const size_t index = table_modulus(table->hash(key), table->capacity);
+	const size_t index = table_modulus(table->hash(key), table_capacity(table));
 	table_Node *bucket = table->buckets[index];
 
 	/* No collision. */
 	if (bucket == NULL)
-		table->buckets[index] = table_Node_new(inserted);
+		table->buckets[index] = table_Node_new(table_Entry_new(key, value));
 	else
 	{
-		while (bucket->next != NULL)
+		while (true)
 		{
-			/* Duplicate key -- Replace with new entry. */
+			/* Duplicate key -- Overwrite the old value. */
 			if (table->equals(bucket->data->key, key))
 			{
-				table_Entry_destroy(bucket->data);
-				bucket->data = inserted;
+				bucket->data->value = value;
 				return;
 			}
 
-			bucket = bucket->next;
+			if (bucket->next != NULL)
+				bucket = bucket->next;
+			else break;
 		}
 
 		/* Append the value to the end of the bucket. */
-		bucket->next = table_Node_new(inserted);
+		bucket->next = table_Node_new(table_Entry_new(key, value));
 	}
 
 	table->size++;
@@ -370,8 +370,6 @@ void table_clear(HashTable* const table)
  */
 void table_grow(HashTable* const table, const size_t capacity)
 {
-	/* Do not grow if the size asked for is too small. */
-	if (capacity < table_capacity(table) * GROW_FACTOR) return;
 	table_mutate(table, capacity);
 }
 
@@ -386,7 +384,7 @@ void table_grow(HashTable* const table, const size_t capacity)
  */
 void table_shrink(HashTable* const table)
 {
-	table_mutate(table, !table_empty(table) ? table_size(table) : DEFAULT_INITIAL_CAPACITY);
+	table_mutate(table, table_size(table));
 }
 
 /*
@@ -491,7 +489,7 @@ void table_mutate(HashTable* const table, const size_t capacity)
 	}
 
 	/* Destroy the old bucket array. */
-	ds_free(table->buckets, old_capacity * sizeof(table_Node*));
+	ds_free(old, old_capacity * sizeof(table_Node*));
 }
 
 /*
@@ -545,9 +543,11 @@ unsigned int table_modulus(const unsigned int operand, const unsigned int power_
  */
 size_t table_regulate_capacity(const size_t desired)
 {
-	return DEFAULT_INITIAL_CAPACITY * (size_t)pow((double)GROW_FACTOR,
-		ceil(log((double)desired / (DEFAULT_INITIAL_CAPACITY * LOAD_FACTOR)) /
-			log((double)GROW_FACTOR)));
+	/* Max prevents value from being zero if desired is zero. */
+	return max(DEFAULT_INITIAL_CAPACITY,
+		DEFAULT_INITIAL_CAPACITY * (size_t)ceil(pow((double)GROW_FACTOR,
+			ceil(log((double)desired / (DEFAULT_INITIAL_CAPACITY * LOAD_FACTOR)) /
+				log((double)GROW_FACTOR)))));
 }
 
 /*
