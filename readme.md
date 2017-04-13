@@ -4,13 +4,12 @@
 Static library implementations of popular data structures in Computer Science. These were developed for use in my own projects, as I wanted a way to abstract the C language a bit to make more complex projects easier to work with.
 Each data structure's implementation should closely match the correct algorithms for each operation. Complexities written in the documentation should be accurate. Each structure may need function pointers in order to work properly. It is up to the user of this library to provide those functions to the structures. The data types for each of the structures is of type `void*`, thus the strucutres need to know how to handle the types you provide it with.
 
-<center>
 |Data Structure|Uses|Sorted?|Functions Required|Thread Safe|
 |-|:-:|:-:|-|:-:
 |Vector| Random Access, Deque, Stack, Queue|On Demand Ω(n * log(n))|**compare** (optional, used for *sort*)<br>**toString** (optional, used for *print*)|No
 |LinkedList|Deque, Stack, Queue|On Demand Θ(n * log(n))|**compare** (optional, used for *sort*)<br>**toString** (optional, used for *print*)|No
 |HashTable|Map, Set|No|**hash** (mandatory)<br>**equals** (mandatory)<br>**toString** (optional, used for *print*)|No
-</center>
+
 
 
 ## Example Uses:
