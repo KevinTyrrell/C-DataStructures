@@ -12,11 +12,9 @@ struct Vector
 	unsigned int start, end;
 	size_t size, capacity;
 
-	/* Function pointers.
-	/* Compare function is needed to compare Keys of each Key/Value pair. */
-	int(*compare)(const void* const, const void* const);
-	/* Returns a given Key/Value pair as a String. */
-	char*(*toString)(const void* const);
+	/* Function pointers. */
+	int(*compare)(const void*, const void*);
+	char*(*toString)(const void*);
 };
 
 /* Convenience functions. */

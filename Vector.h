@@ -16,7 +16,7 @@ typedef struct Vector Vector;
 
 /* ~~~~~ Constructors ~~~~~ */
 
-Vector* Vector_new(int(*compare)(const void *, const void *), char*(*toString)(const void* const));
+Vector* Vector_new(int(*compare)(const void*, const void*), char*(*toString)(const void*));
 
 /* ~~~~~ Accessors ~~~~~ */
 

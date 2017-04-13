@@ -1,25 +1,17 @@
 ## Data Structures in C
 =========================
 
-The following are static libraries for use in my C coding projects. Ω, Θ, and O complexities should be relatively similar to their standard-library counterparts in C++/Java. Each function will have the three cases of complexity noted above their implementations. The structures were hand written without reference to the actual source code of professional implementations (excluding Red Black Tree as the whole structure is a set of rules and conditions). Each data structure will require a (sometimes optional) function pointer(s) in order to work properly. 
+Static library implementations of popular data structures in Computer Science. These were developed for use in my own projects, as I wanted a way to abstract the C language a bit to make more complex projects easier to work with.
+Each data structure's implementation should closely match the correct algorithms for each operation. Complexities written in the documentation should be accurate. Each structure may need function pointers in order to work properly. It is up to the user of this library to provide those functions to the structures. The data types for each of the structures is of type `void*`, thus the strucutres need to know how to handle the types you provide it with.
 
+<center>
+|Data Structure|Uses|Sorted?|Functions Required|Thread Safe|
+|-|:-:|:-:|-|:-:
+|Vector| Random Access, Deque, Stack, Queue|On Demand Ω(n * log(n))|**compare** (optional, used for *sort*)<br>**toString** (optional, used for *print*)|No
+|LinkedList|Deque, Stack, Queue|On Demand Θ(n * log(n))|**compare** (optional, used for *sort*)<br>**toString** (optional, used for *print*)|No
+|HashTable|Map, Set|No|**hash** (mandatory)<br>**equals** (mandatory)<br>**toString** (optional, used for *print*)|No
+</center>
 
-| Data Structure | Header File    | C File         | Constructor Function | Functions needed for the constructor                           |
-| -------------- | -------------- | -------------- | -------------------- | -------------------------------------------------------------- |
-| Vector         | Vector.h       | Vector.c       | Vector_new()         | int compare(void*, void*), toString(void*)                     |
-| LinkedList     | LinkedList.h   | LinkedList.c   | LinkedList_new()	  | equals(void*, void*), toString(void*)                          |
-| HashMap        | HashMap.h	  | HashMap.c      | HashMap_new()		  | unsigned int hash(void*), equals(void*, void*), toString(void*)|
-| RedBlackTree   | RedBlackTree.h | RedBlackTree.c | RedBlackTree_new()   | int compare(void*, void*), toString(void*)                     |
-
-
-## Vector
-
-* Circular dynamically-resizing array.
-* `O(1)` push, pop from both sides
-* `O(1)` random access
-* Doubles capacity once full
-
-...
 
 ## Example Uses:
 
@@ -67,85 +59,74 @@ int main(int argc, char* argv[])
 }
 ```
 
-
-#### LinkedList
-
-```c
-#include "LinkedList.h"
-#include <math.h>
-
-int main()
-{
-	// NULL can be used for function pointers.
-	// This prevents the LinkedList from using search(var) and toString()
-	const struct LinkedList *queue = LinkedList_new(NULL, NULL);
-
-	int *start = malloc(sizeof(int));
-	*start = 5;
-	ll_push_back(start);
-
-	while(!ll_empty(queue))
-	{
-		int *ptr = ll_front(queue);
-		ll_pop_front(queue);
-		int val = *ptr;
-		free(ptr);
-		
-		if (val % 5 == 0)
-		{		
-			int *weird = malloc(sizeof(int)), *other = malloc(sizeof(int));
-			*wierd = (int)(sqrt((double)val * 2434));
-			*other = (int)(pow((double)val, 7.0) + 99;
-			ll_push_back(weird);
-			ll_push_back(other);
-		}
-	}
-
-	// Must be called before the LinkedList falls out of scope.
-	ll_destroy(queue);
-}
-```
-
-
-
-#### HashMap
+#### HashTable
 
 
 ```c
-#include "HashMap.h"
+#include "HashTable.h"
 
-#include <time.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 
-unsigned int hash(void* var)
+/* djb2 algorithm by Dan Bernstein. */
+unsigned int hash(const void *key)
 {
-	char v = *(char*)var;
-	unsigned int h = 4243;
-	return (h << 5) + h * v;
+	/* Our key in this case is a String. */
+	const char* str = (char*)key;
+	unsigned int hash = 5381;
+
+	for (int c; c = *str++;)
+		hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+	return hash;
 }
 
-bool equals(void* v1, void* v2)
+/* Check if two Strings are equal. */
+bool equals(const void *k1, const void *k2)
 {
-	return *(char*)v1 == *(char*)v2;
+	return strcmp(k1, k2) == 0;
 }
 
-int main()
+/* Only used for printing out Key/Value pairs. */
+char* toString(const struct table_Entry *entry)
 {
-	const struct HashMap *map = HashMap_new(16, &hash, &equals, NULL);
-	srand(5);
-	
-	for (char i = '!'; i < '~'; i++)
-	{
-		char *key = malloc(sizeof(char));
-		*key = i;
-		int *value = malloc(sizeof(int));
-		*value = rand();
-		hm_put(map, key, value);
-	}
-	
-	char search = '$';
-	char *located = hm_get(map, &search);
-	printf_s("Found: %d\n", *located);
+	static char ar[50];
+	sprintf(ar, "<%s,%.2f>", (char*)entry->key, *(float*)entry->value);
+	return ar;
+}
 
-	hm_destroy(map);
+int main(int argc, char* argv[])
+{
+	HashTable* const gradebook = HashTable_new(&hash, &equals, &toString);
+	
+	size_t size = 13;
+	const char* const students[] = {
+		"Jessie", "James", "Brock", "Misty", "Ash", "Gary", "Oak", "Giovanni",
+		"Jenny", "Tracey", "May", "Max", "Dawn"
+	};
+	const float const grades[] = {
+		3.25f, 1.98f, 3.90f, 2.0f, 1.12f, 1.8f, 2.0f, 3.33f,
+		4.0f, 3.0f, 0.5f, 2.9f, 2.1f
+	};
+
+	// HashTable grows automatically, table_grow call is not needed.
+	// If you do know how many elements you want to add, call grow to speed up complexity.
+	table_grow(gradebook, size);
+
+	// Place all Key/Value pairs into the map.
+	for (int i = 0; i < size; i++)
+		table_put(gradebook, students[i], &grades[i]);
+	
+	// Get the value associated with the key "Ash".
+	printf("The student %s has a GPA of %.2f.\n", "Ash",
+		*(float*)table_get(gradebook, "Ash"));
+
+	// Print all Key/Value entries.
+	table_print(gradebook);
+
+ 	/* Remember to free the HashTable after use. */
+	table_destroy(gradebook);
+	return 0;
 }
 ```
