@@ -4,8 +4,20 @@
 #define DEFAULT_INITIAL_CAPACITY 10
 #define VECTOR_GROW_AMOUNT 2
 
-/* Local typedef for convenience. */
-typedef struct Vector Vector;
+/* Vector structure. */
+struct Vector
+{
+	const void** table;
+	/* Start and end let us know where the data is. */
+	unsigned int start, end;
+	size_t size, capacity;
+
+	/* Function pointers.
+	/* Compare function is needed to compare Keys of each Key/Value pair. */
+	int(*compare)(const void* const, const void* const);
+	/* Returns a given Key/Value pair as a String. */
+	char*(*toString)(const void* const);
+};
 
 /* Convenience functions. */
 static bool vect_full(const Vector* const vect);
@@ -13,7 +25,7 @@ static void vect_grow(const Vector* const vect);
 static void vect_swap(const Vector* const vect, const unsigned int i, const unsigned int h);
 static void ptr_swap(const void** const v1, const void** const v2);
 static void vect_merge_sort(const Vector* const vect, const unsigned int start, const size_t size);
-static void vect_quick_sort(const struct Vector* const vect, const unsigned int index, const size_t size);
+static void vect_quick_sort(const Vector* const vect, const unsigned int index, const size_t size);
 static void vect_shift(Vector* const vect, const unsigned int start, const unsigned int stop, const bool leftwards);
 static unsigned int vect_index(const Vector* const vect, const unsigned int index);
 static unsigned int wrap_add(unsigned int val, int dx, const unsigned int lower, const unsigned int upper);
@@ -27,13 +39,13 @@ typedef struct
 } Iterator;
 
 /* Iterator functionality. */
-static void iter_next(Iterator* const iter);
-static void iter_prev(Iterator* const iter);
-static bool iter_has_next(const Iterator* const iter);
-static bool iter_has_prev(const Iterator* const iter);
+static void vect_iter_next(Iterator* const iter);
+static void vect_iter_prev(Iterator* const iter);
+static bool vect_iter_has_next(const Iterator* const iter);
+static bool vect_iter_has_prev(const Iterator* const iter);
 
 /* Constructor function. */
-struct Vector* Vector_new(int(*compare)(const void*, const void*), char*(*toString)(const void*))
+Vector* Vector_new(int(*compare)(const void*, const void*), char*(*toString)(const void*))
 {
 	Vector* const vect = ds_calloc(1, sizeof(Vector));
 	vect->table = ds_calloc(DEFAULT_INITIAL_CAPACITY, sizeof(void*));
@@ -47,7 +59,7 @@ struct Vector* Vector_new(int(*compare)(const void*, const void*), char*(*toStri
  * Returns the value at the given index.
  * Θ(1)
  */
-void* vect_at(const struct Vector* const vect, const unsigned int index)
+void* vect_at(const Vector* const vect, const unsigned int index)
 {
 	/* Error checking before accessing. */
 	bool error = true;
@@ -66,7 +78,7 @@ void* vect_at(const struct Vector* const vect, const unsigned int index)
  * Returns the value at the front of the Vector.
  * Θ(n)
  */
-void* vect_front(const struct Vector* const vect)
+void* vect_front(const Vector* const vect)
 {
 	if (vect_empty(vect))
 	{
@@ -81,7 +93,7 @@ void* vect_front(const struct Vector* const vect)
  * Returns the value at the end of the Vector.
  * Θ(1)
  */
-void* vect_back(const struct Vector* const vect)
+void* vect_back(const Vector* const vect)
 {
 	if (vect_empty(vect))
 	{
@@ -96,7 +108,7 @@ void* vect_back(const struct Vector* const vect)
  * Returns the size of the Vector.
  * Θ(1)
  */
-size_t vect_size(const struct Vector* const vect)
+size_t vect_size(const Vector* const vect)
 {
 	return vect->size;
 }
@@ -105,7 +117,7 @@ size_t vect_size(const struct Vector* const vect)
  * Returns true if the Vector is empty.
  * Ω(1), Θ(1), O(1)
  */
-bool vect_empty(const struct Vector* const vect)
+bool vect_empty(const Vector* const vect)
 {
 	return vect->size == 0;
 }
@@ -114,7 +126,7 @@ bool vect_empty(const struct Vector* const vect)
  * Returns true if the Vector contains the provided element.
  * Θ(n)
  */
-bool vect_contains(const struct Vector* const vect, const void* const data)
+bool vect_contains(const Vector* const vect, const void* const data)
 {
 	for (unsigned int i = 0, size = vect_size(vect); i < size; i++)
 		if (vect->compare(vect_at(vect, i), data) == 0)
@@ -127,7 +139,7 @@ bool vect_contains(const struct Vector* const vect, const void* const data)
  * Remember to call `free` on the dynamically allocated array.
  * Θ(n)
  */
-void** vect_array(const struct Vector* const vect)
+void** vect_array(const Vector* const vect)
 {
 	const void** const arr = calloc(vect_size(vect), sizeof(void*));
 	for (unsigned int i = 0, size = vect_size(vect); i < size; i++)
@@ -140,7 +152,7 @@ void** vect_array(const struct Vector* const vect)
  * Prints out the contents of the Vector using the toString function.
  * Θ(n)
  */
-void vect_print(const struct Vector* const vect)
+void vect_print(const Vector* const vect)
 {
 	printf("%c", '[');
 	for (unsigned int i = 0; i < vect->size; i++)
@@ -153,7 +165,7 @@ void vect_print(const struct Vector* const vect)
  * Prints out the internal structure of the inner array.
  * Θ(n)
  */
-void vect_debug_print(const struct Vector* const vect)
+void vect_debug_print(const Vector* const vect)
 {
 	/* Determine how many rows we will need to print and go through each one. */
 	const unsigned int INDEXES_PER_ROW = 10;
@@ -187,7 +199,7 @@ void vect_debug_print(const struct Vector* const vect)
  * Replaces an element in the Vector at a given index with a specified value.
  * Θ(1)
  */
-void vect_assign(const struct Vector* const vect, const unsigned int index, const void* const data)
+void vect_assign(const Vector* const vect, const unsigned int index, const void* const data)
 {
 	/* Error checking before accessing. */
 	bool error = true;
@@ -207,7 +219,7 @@ void vect_assign(const struct Vector* const vect, const unsigned int index, cons
  * Inserts the given element at the provided index.
  * Ω(1), O(n)
  */
-void vect_insert(struct Vector* const vect, const unsigned int index, const void* const data)
+void vect_insert(Vector* const vect, const unsigned int index, const void* const data)
 {
 	bool exit = true;
 	if (data == NULL)
@@ -244,7 +256,7 @@ void vect_insert(struct Vector* const vect, const unsigned int index, const void
  * Attempts to remove a provided element from the Vector, if it exists.
  * Θ(n)
  */
-bool vect_remove(struct Vector* const vect, const void* const data)
+bool vect_remove(Vector* const vect, const void* const data)
 {
 	if (data == NULL)
 	{
@@ -268,7 +280,7 @@ bool vect_remove(struct Vector* const vect, const void* const data)
  * Erases an element from the Vector at a given index.
  * Ω(1), O(n)
  */
-void vect_erase(struct Vector* const vect, const unsigned int index)
+void vect_erase(Vector* const vect, const unsigned int index)
 {
 	bool exit = true;
 	if (index > vect_size(vect))
@@ -349,7 +361,7 @@ void vect_push_front(Vector * const vect, const void * const data)
  * Removes the element at the end of the Vector.
  * Θ(1)
  */
-void vect_pop_back(struct Vector* const vect)
+void vect_pop_back(Vector* const vect)
 {
 	if (vect_empty(vect))
 	{
@@ -367,7 +379,7 @@ void vect_pop_back(struct Vector* const vect)
 * Removes the element at the front of the Vector.
 * Θ(1)
 */
-void vect_pop_front(struct Vector* const vect)
+void vect_pop_front(Vector* const vect)
 {
 	if (vect_empty(vect))
 	{
@@ -385,7 +397,7 @@ void vect_pop_front(struct Vector* const vect)
  * Append data from another Vector to the end of this Vector.
  * Θ(n)
  */
-void vect_append_vect(const struct Vector* const vect, const struct Vector* const data)
+void vect_append(const Vector* const vect, const Vector* const data)
 {
 	const size_t combined = vect_size(vect) + vect_size(data);
 	if (vect->capacity < combined)
@@ -398,7 +410,7 @@ void vect_append_vect(const struct Vector* const vect, const struct Vector* cons
 * Append data from an array to the end of this Vector.
 * Θ(n)
 */
-void vect_append_array(const struct Vector* const vect, const void** const data, const size_t size)
+void vect_append_array(const Vector* const vect, const void** const data, const size_t size)
 {
 	const size_t combined = vect_size(vect) + size;
 	if (vect->capacity < combined)
@@ -411,7 +423,7 @@ void vect_append_array(const struct Vector* const vect, const void** const data,
  * Removes all elements from the Vector while preserving the capacity.
  * Θ(1)
  */
-void vect_clear(struct Vector* const vect)
+void vect_clear(Vector* const vect)
 {
 	vect->start = 0;
 	vect->end = 0;
@@ -423,7 +435,7 @@ void vect_clear(struct Vector* const vect)
  * Uses the `compare` function provided to the Vector.
  * See: `vect_quick_sort`
  */
-void vect_sort(const struct Vector* const vect)
+void vect_sort(const Vector* const vect)
 {
 	vect_quick_sort(vect, 0, vect->size);
 }
@@ -434,7 +446,7 @@ void vect_sort(const struct Vector* const vect)
  * (https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle)
  * Θ(n)
  */
-void vect_shuffle(const struct Vector* const vect)
+void vect_shuffle(const Vector* const vect)
 {
 	const size_t size = vect_size(vect);
 	for (unsigned int i = size - 1; i > 0; i--)
@@ -448,7 +460,7 @@ void vect_shuffle(const struct Vector* const vect)
  * De-constructor function. 
  * Θ(1)
  */
-void vect_destroy(const struct Vector* const vect)
+void vect_destroy(const Vector* const vect)
 {
 	ds_free(vect->table, vect->capacity * sizeof(void*));
 	ds_free((void*)vect, sizeof(Vector));
@@ -635,18 +647,18 @@ void vect_merge_sort(const Vector* const vect, const unsigned int start, const s
 		arr_right[i] = vect_at(vect, start_right + i);
 	
 	/* Maintain track of an iterator for the combined array and the two sub-arrays. */
-	unsigned int iter = start, iter_left = 0, iter_right = 0;
+	unsigned int iter = start, vect_iter_left = 0, vect_iter_right = 0;
 
 	/* Merge the two sub-arrays back into the primary array. */
-	while (iter_left < size_left && iter_right < size_right)
-		if (vect->compare(arr_left[iter_left], arr_right[iter_right]) <= 0)
-			vect_assign(vect, iter++, arr_left[iter_left++]);
+	while (vect_iter_left < size_left && vect_iter_right < size_right)
+		if (vect->compare(arr_left[vect_iter_left], arr_right[vect_iter_right]) <= 0)
+			vect_assign(vect, iter++, arr_left[vect_iter_left++]);
 		else
-			vect_assign(vect, iter++, arr_right[iter_right++]);
-	while (iter_left < size_left)
-		vect_assign(vect, iter++, arr_left[iter_left++]);
-	while (iter_right < size_right)
-		vect_assign(vect, iter++, arr_right[iter_right++]);
+			vect_assign(vect, iter++, arr_right[vect_iter_right++]);
+	while (vect_iter_left < size_left)
+		vect_assign(vect, iter++, arr_left[vect_iter_left++]);
+	while (vect_iter_right < size_right)
+		vect_assign(vect, iter++, arr_right[vect_iter_right++]);
 
 	/* Clean up memory and return the sorted array. */
 	ds_free(arr_left, size_left * sizeof(void*));
@@ -666,7 +678,7 @@ void vect_shift(Vector* const vect, const unsigned int start, const unsigned int
 	/* Shifting left means iterating rightwards and vice versa.
 	 * Function pointer makes this process much easier to read. */
 	void(*iterate)(Iterator* const);
-	iterate = leftwards ? &iter_next : &iter_prev;
+	iterate = leftwards ? &vect_iter_next : &vect_iter_prev;
 		
 	/* Iterate and swap. */
 	while (iter.index != start)
@@ -682,7 +694,7 @@ void vect_shift(Vector* const vect, const unsigned int start, const unsigned int
  * Moves the Iterator forward one index.
  * Θ(1)
  */
-void iter_next(Iterator* const iter)
+void vect_iter_next(Iterator* const iter)
 {
 	iter->index = wrap_add(iter->index, 1, 0, iter->ref->capacity - 1);		
 }
@@ -691,7 +703,7 @@ void iter_next(Iterator* const iter)
  * Moves the Iterator backward one index.
  * Θ(1)
  */
-void iter_prev(Iterator* const iter)
+void vect_iter_prev(Iterator* const iter)
 {
 	iter->index = wrap_add(iter->index, -1, 0, iter->ref->capacity - 1);
 }
@@ -700,7 +712,7 @@ void iter_prev(Iterator* const iter)
  * Returns true if the Iterator can move forward.
  * Θ(1)
  */
-bool iter_has_next(const Iterator* const iter)
+bool vect_iter_has_next(const Iterator* const iter)
 {
 	return iter->index != iter->ref->end;
 }
@@ -709,7 +721,7 @@ bool iter_has_next(const Iterator* const iter)
 * Returns true if the Iterator can move backwards.
 * Θ(1)
 */
-bool iter_has_prev(const Iterator* const iter)
+bool vect_iter_has_prev(const Iterator* const iter)
 {
 	return iter->index != iter->ref->start;
 }

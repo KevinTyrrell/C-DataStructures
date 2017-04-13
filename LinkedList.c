@@ -1,5 +1,6 @@
 ﻿
 #include "LinkedList.h"
+#include "C-Random/Random.h"
 
 #define START true
 #define END false
@@ -11,12 +12,12 @@ typedef struct ll_Node
 	struct ll_Node *next, *prev;
 } ll_Node;
 
-/* list structure. */
+/* LinkedList structure. */
 struct LinkedList
 {
 	ll_Node *root, *tail;
 	size_t size;
-	/* Pointer functions */
+	/* Function pointers. */
 	int(*compare)(const void*, const void*);
 	char*(*toString)(const void*);
 };
@@ -32,7 +33,6 @@ struct ll_Iterator
 /* Local functions. */
 static ll_Node* Node_new(const void* const data);
 static ll_Node* ll_search(const LinkedList* const list, const size_t index);
-static ll_Node* ll_iter_get(const ll_Iterator* const iter);
 static void ll_link(ll_Node* const left, ll_Node* const right);
 static void ll_separate(LinkedList* const list, LinkedList* const l1, LinkedList* const l2);
 static void* ll_pull_front(LinkedList* const list);
@@ -403,6 +403,11 @@ void ll_clear(LinkedList* const list)
 	list->size = 0;
 }
 
+/*
+ * Sorts the elements inside the list in ascending order.
+ * Implementation uses Mergesort algorithm.
+ * Θ(n * log(n))
+ */
 void ll_sort(LinkedList* const list)
 {
 	if (ll_size(list) <= 1)

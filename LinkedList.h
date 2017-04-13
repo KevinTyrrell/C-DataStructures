@@ -10,8 +10,6 @@ Version: 3.0
 #include "Tools.h"
 #include "C-Random/Random.h"
 
-#include <time.h>
-
 /* Private structures. */
 typedef struct LinkedList LinkedList;
 typedef struct ll_Iterator ll_Iterator;
@@ -67,7 +65,7 @@ bool ll_remove(LinkedList* const list, const void* const data);
 void ll_erase(LinkedList* const list, const size_t index);
 /* Removes all elements inside the list. */
 void ll_clear(LinkedList* const list);
-/* Sorts elements inside the list in descending order. */
+/* Sorts the elements inside the list in ascending order. */
 void ll_sort(LinkedList* const list);
 /* Shuffles the elements in the list pseudo-randomly. */
 void ll_shuffle(LinkedList* const list);
