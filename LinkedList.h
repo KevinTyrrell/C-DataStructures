@@ -10,8 +10,14 @@ Version: 3.0
 #include "Tools.h"
 #include "C-Random/Random.h"
 
-/* Private structures. */
+/*
+* LinkedList data structure.
+* LinkedList manages elements with pointers and references.
+* Elements are added dynamically without wasted memory.
+* Constructor: LinkedList_new, De-constructor: ll_destroy.
+*/
 typedef struct LinkedList LinkedList;
+/* Iterator for the LinkedList. */
 typedef struct ll_Iterator ll_Iterator;
 
 /* ~~~~~ Constructors ~~~~~ */

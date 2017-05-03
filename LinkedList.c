@@ -5,7 +5,7 @@
 #define START true
 #define END false
 
-/* ll_Node structure. */
+/* Node structure. */
 typedef struct ll_Node
 {
 	void *data;
@@ -17,6 +17,9 @@ struct LinkedList
 {
 	ll_Node *root, *tail;
 	size_t size;
+
+	// TODO: Invalidation listener.
+
 	/* Function pointers. */
 	int(*compare)(const void*, const void*);
 	char*(*toString)(const void*);
@@ -31,7 +34,7 @@ struct ll_Iterator
 };
 
 /* Local functions. */
-static ll_Node* Node_new(const void* const data);
+static ll_Node* Node_new(void* const data);
 static ll_Node* ll_search(const LinkedList* const list, const size_t index);
 static void ll_link(ll_Node* const left, ll_Node* const right);
 static void ll_separate(LinkedList* const list, LinkedList* const l1, LinkedList* const l2);
@@ -50,7 +53,7 @@ LinkedList* LinkedList_new(int(*compare)(const void*, const void*),
 }
 
 /* Constructor function. */
-ll_Node* Node_new(const void* const data)
+ll_Node* Node_new(void* const data)
 {
 	ll_Node *node = ds_calloc(1, sizeof(ll_Node));
 	node->data = data;

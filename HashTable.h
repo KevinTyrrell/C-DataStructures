@@ -14,7 +14,7 @@
  * HashTable uses the passed in Hash function to manage elements.
  * Each key of the key value pair are hashed and placed into the table.
  * The table grows as it needs space for more elements.
- * Constructor: Hashtable_new, De-constructor: table_destroy.
+ * Constructor: HashTable_new, De-constructor: table_destroy.
  */
 typedef struct HashTable HashTable;
 
