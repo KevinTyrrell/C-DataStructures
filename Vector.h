@@ -1,17 +1,19 @@
 ﻿
 /*
-Author: Kevin Tyrrell
-Date: 2/27/2017
-Version: 2.1
-*/
+ * Author: Kevin Tyrrell
+ * Date: 2/27/2017
+ * Version: 3.0
+ */
 
 #pragma once
 
-#include "Tools.h"
+#include "tools/Memory.h"
+#include "tools/Synchronize.h"
 #include "C-Random/Random.h"
 
 #include <math.h>
 
+/* Anonymous structure. */
 typedef struct Vector Vector;
 
 /* ~~~~~ Constructors ~~~~~ */
@@ -36,8 +38,6 @@ bool vect_contains(const Vector* const vect, const void* const data);
 void** vect_array(const Vector* const vect);
 /* Prints out the contents of the Vector using the toString function. */
 void vect_print(const Vector* const vect);
-/* Prints out the internal structure of the inner array. */
-void vect_debug_print(const Vector* const vect);
 
 /* ~~~~~ Mutators ~~~~~ */
 
@@ -58,9 +58,9 @@ void vect_pop_back(Vector* const vect);
 /* Removes the element at the front of the Vector. */
 void vect_pop_front(Vector* const vect);
 /* Append data from another Vector to the end of this Vector. */
-void vect_append(const Vector* const vect, const Vector* const data);
+void vect_append(Vector* const vect, const Vector* const other);
 /* Append data from an array to the end of this Vector. */
-void vect_append_array(const Vector* const vect, const void** const data, const size_t size);
+void vect_append_array(Vector* const vect, const void** const data, const size_t size);
 /* Grows the underlying array to be able to store at least `min_size` elements. */
 void vect_grow_to(Vector* const vect, const size_t min_size);
 /* Removes all elements from the Vector while preserving the capacity. */

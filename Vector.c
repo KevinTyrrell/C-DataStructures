@@ -12,6 +12,9 @@ struct Vector
 	unsigned int start, end;
 	size_t size, capacity;
 
+	/* Synchronization. */
+	ReadWriteSync *rw_sync;
+
 	/* Function pointers. */
 	int(*compare)(const void*, const void*);
 	char*(*toString)(const void*);
@@ -19,7 +22,7 @@ struct Vector
 
 /* Convenience functions. */
 static bool vect_full(const Vector* const vect);
-static void vect_grow(const Vector* const vect);
+static void vect_grow(Vector* const vect);
 static void vect_swap(const Vector* const vect, const unsigned int i, const unsigned int h);
 static void ptr_swap(const void** const v1, const void** const v2);
 static void vect_merge_sort(const Vector* const vect, const unsigned int start, const size_t size);
@@ -45,11 +48,12 @@ static bool vect_iter_has_prev(const Iterator* const iter);
 /* Constructor function. */
 Vector* Vector_new(int(*compare)(const void*, const void*), char*(*toString)(const void*))
 {
-	Vector* const vect = ds_calloc(1, sizeof(Vector));
-	vect->table = ds_calloc(DEFAULT_INITIAL_CAPACITY, sizeof(void*));
+	Vector* const vect = mem_calloc(1, sizeof(Vector));
+	vect->table = mem_calloc(DEFAULT_INITIAL_CAPACITY, sizeof(void*));
 	vect->capacity = DEFAULT_INITIAL_CAPACITY;
 	vect->compare = compare;
 	vect->toString = toString;
+    vect->rw_sync = ReadWriteSync_new();
 	return vect;
 }
 
@@ -59,47 +63,69 @@ Vector* Vector_new(int(*compare)(const void*, const void*), char*(*toString)(con
  */
 void* vect_at(const Vector* const vect, const unsigned int index)
 {
-	/* Error checking before accessing. */
-	bool error = true;
-	if (vect_empty(vect))
-		ds_error(DS_MSG_EMPTY);
-	else if (index >= vect_size(vect))
-		ds_error(DS_MSG_OUT_OF_BOUNDS);
-	else error = false;
-	if (error) return NULL;
+	/* Lock the data structure to future writers. */
+	sync_read_start(vect->rw_sync);
 
-	/* Wrap around the table if the index exceeds the capacity. */
-	return (void*)vect->table[vect_index(vect, index)];
+	void *val = NULL;
+
+	if (vect->size == 0)
+		io_error(IO_MSG_EMPTY);
+	else if (index >= vect->size)
+		io_error(IO_MSG_OUT_OF_BOUNDS);
+	else
+	{
+		/* Wrap around the table if the index exceeds the capacity. */
+		val = (void*)vect->table[vect_index(vect, index)];
+	}
+
+	/* Unlock the data structure. */
+	sync_read_end(vect->rw_sync);
+
+	return val;
 }
 
 /*
  * Returns the value at the front of the Vector.
- * Θ(n)
+ * This function is synchronized.
+ * Θ(1)
  */
 void* vect_front(const Vector* const vect)
 {
-	if (vect_empty(vect))
-	{
-		ds_error(DS_MSG_EMPTY);
-		return NULL;
-	}
+	/* Lock the data structure to future writers. */
+	sync_read_start(vect->rw_sync);
 
-	return (void*)vect->table[vect->start];
+	void *val = NULL;
+    
+	if (vect->size > 0)
+		val = (void*)vect->table[vect->start];
+	else io_error(IO_MSG_EMPTY);
+
+	/* Unlock the data structure. */
+	sync_read_end(vect->rw_sync);
+
+	return val;
 }
 
 /*
  * Returns the value at the end of the Vector.
+ * This function is synchronized.
  * Θ(1)
  */
 void* vect_back(const Vector* const vect)
 {
-	if (vect_empty(vect))
-	{
-		ds_error(DS_MSG_EMPTY);
-		return NULL;
-	}
+	/* Lock the data structure to future writers. */
+	sync_read_start(vect->rw_sync);
 
-	return (void*)vect->table[vect->end];
+	void *val = NULL;
+
+	if (vect->size > 0)
+		val = (void*)vect->table[vect->end];
+	else io_error(IO_MSG_EMPTY);
+
+	/* Unlock the data structure. */
+	sync_read_end(vect->rw_sync);
+
+	return val;
 }
 
 /*
@@ -108,16 +134,32 @@ void* vect_back(const Vector* const vect)
  */
 size_t vect_size(const Vector* const vect)
 {
-	return vect->size;
+	/* Lock the data structure to future writers. */
+	sync_read_start(vect->rw_sync);
+
+	const size_t size = vect->size;
+
+	/* Unlock the data structure. */
+	sync_read_end(vect->rw_sync);
+
+	return size;
 }
 
 /*
  * Returns true if the Vector is empty.
- * Ω(1), Θ(1), O(1)
+ * Θ(1)
  */
 bool vect_empty(const Vector* const vect)
 {
-	return vect->size == 0;
+	/* Lock the data structure to future writers. */
+	sync_read_start(vect->rw_sync);
+
+	const bool empty = vect->size == 0;
+
+	/* Unlock the data structure. */
+	sync_read_end(vect->rw_sync);
+
+	return empty;
 }
 
 /*
@@ -126,10 +168,22 @@ bool vect_empty(const Vector* const vect)
  */
 bool vect_contains(const Vector* const vect, const void* const data)
 {
-	for (unsigned int i = 0, size = vect_size(vect); i < size; i++)
+	bool success = false;
+
+	/* Lock the data structure to future writers. */
+	sync_read_start(vect->rw_sync);
+
+	for (unsigned int i = 0, size = vect->size; i < size; i++)
 		if (vect->compare(vect_at(vect, i), data) == 0)
-			return true;
-	return false;
+		{
+			success = true;
+			break;
+		}
+
+	/* Unlock the data structure. */
+	sync_read_end(vect->rw_sync);
+
+	return success;
 }
 
 /*
@@ -139,10 +193,16 @@ bool vect_contains(const Vector* const vect, const void* const data)
  */
 void** vect_array(const Vector* const vect)
 {
-	const void** const arr = calloc(vect_size(vect), sizeof(void*));
-	for (unsigned int i = 0, size = vect_size(vect); i < size; i++)
+	/* Lock the data structure to future writers. */
+	sync_read_start(vect->rw_sync);
+
+	void** const arr = calloc(vect->size, sizeof(void*));
+	for (unsigned int i = 0, size = vect->size; i < size; i++)
 		arr[i] = vect_at(vect, i);
-	
+
+	/* Unlock the data structure. */
+	sync_read_end(vect->rw_sync);
+
 	return arr;
 }
 
@@ -152,15 +212,22 @@ void** vect_array(const Vector* const vect)
  */
 void vect_print(const Vector* const vect)
 {
+	/* Lock the data structure to future writers. */
+	sync_read_start(vect->rw_sync);
+
 	printf("%c", '[');
 	for (unsigned int i = 0; i < vect->size; i++)
 		printf("%s%s", vect->toString(vect_at(vect, i)),
 			i + 1 < vect->size ? ", " : "");
 	printf("]\n");
+
+	/* Unlock the data structure. */
+	sync_read_end(vect->rw_sync);
 }
 
 /*
  * Prints out the internal structure of the inner array.
+ * TODO: Determine fate of this function.
  * Θ(n)
  */
 void vect_debug_print(const Vector* const vect)
@@ -175,13 +242,13 @@ void vect_debug_print(const Vector* const vect)
 	for (unsigned int i = 0; i < rows; i++)
 	{
 		printf("     ");
-		const WORD oldColor = ds_changeColor(elementColor);
+		const WORD oldColor = io_color(elementColor);
 		for (unsigned int h = 0; h < INDEXES_PER_ROW && iter < vect->capacity; h++)
 		{
 			const void* const value = vect->table[iter++];
 			printf(" %.1s  ", value != NULL ? vect->toString(value) : ".");
 		}
-		ds_changeColor(oldColor);
+		io_color(oldColor);
 
 		printf("\nR%u   ", i % 10);
 		/* Print indexes at the bottom of the row to indicate where we are in the array. */
@@ -190,7 +257,7 @@ void vect_debug_print(const Vector* const vect)
 		printf("\n");
 	}
 
-	printf("Vector Status -- Size: %zu, Capacity: %zu, Start: %u, End: %u.\n", vect_size(vect), vect->capacity, vect->start, vect->end);
+	printf("Vector Status -- Size: %zu, Capacity: %zu, Start: %u, End: %u.\n", vect->size, vect->capacity, vect->start, vect->end);
 }
 
 /*
@@ -199,18 +266,24 @@ void vect_debug_print(const Vector* const vect)
  */
 void vect_assign(const Vector* const vect, const unsigned int index, const void* const data)
 {
-	/* Error checking before accessing. */
-	bool error = true;
 	if (data == NULL)
-		ds_error(DS_MSG_NULL_PTR);
-	else if (vect_empty(vect))
-		ds_error(DS_MSG_EMPTY);
-	else if (index >= vect_size(vect))
-		ds_error(DS_MSG_OUT_OF_BOUNDS);
-	else error = false;
-	if (error) return;
+	{
+		io_error(IO_MSG_NULL_PTR);
+		return;
+	}
 
-	vect->table[vect_index(vect, index)] = data;
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
+
+	if (vect->size == 0)
+		io_error(IO_MSG_EMPTY);
+	else if (index >= vect->size)
+		io_error(IO_MSG_OUT_OF_BOUNDS);
+	else
+		vect->table[vect_index(vect, index)] = data;
+
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
@@ -219,35 +292,44 @@ void vect_assign(const Vector* const vect, const unsigned int index, const void*
  */
 void vect_insert(Vector* const vect, const unsigned int index, const void* const data)
 {
-	bool exit = true;
 	if (data == NULL)
-		ds_error(DS_MSG_NULL_PTR);
-	else if (index > vect_size(vect))
-		ds_error(DS_MSG_OUT_OF_BOUNDS);
+	{
+		io_error(IO_MSG_NULL_PTR);
+		return;
+	}
+
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
+
+	if (index > vect->size)
+		io_error(IO_MSG_OUT_OF_BOUNDS);
 	else if (index == 0)
 		vect_push_front(vect, data);
-	else if (index == vect_size(vect))
+	else if (index == vect->size)
 		vect_push_back(vect, data);
-	else exit = false;
-	if (exit) return;
-
-	if (vect_full(vect))
-		vect_grow(vect);
-
-	/* Check if shifting right is quicker. */
-	if (vect->size - 1 - index <= index)
-	{
-		vect->end = wrap_add(vect->end, 1, 0, vect->capacity - 1);
-		vect_shift(vect, vect_index(vect, index), vect->end, false);
-	}
 	else
 	{
-		vect->start = wrap_add(vect->start, -1, 0, vect->capacity - 1);
-		vect_shift(vect, vect_index(vect, index), vect->start, true);
+		if (vect_full(vect))
+			vect_grow(vect);
+
+		/* Check if shifting right is quicker. */
+		if (vect->size - 1 - index <= index)
+		{
+			vect->end = wrap_add(vect->end, 1, 0, vect->capacity - 1);
+			vect_shift(vect, vect_index(vect, index), vect->end, false);
+		}
+		else
+		{
+			vect->start = wrap_add(vect->start, -1, 0, vect->capacity - 1);
+			vect_shift(vect, vect_index(vect, index), vect->start, true);
+		}
+
+		vect->size++;
+		vect_assign(vect, index, data);
 	}
 
-	vect->size++;
-	vect_assign(vect, index, data);
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
@@ -258,20 +340,29 @@ bool vect_remove(Vector* const vect, const void* const data)
 {
 	if (data == NULL)
 	{
-		ds_error(DS_MSG_NULL_PTR);
+		io_error(IO_MSG_NULL_PTR);
 		return false;
 	}
 
-	const unsigned size = vect_size(vect);
+	bool success = false;
+
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
+
+	const unsigned size = vect->size;
 	for (unsigned int i = 0; i < size; i++)
 		/* Search for a data element that matches the parameter. */
 		if (vect->compare(vect_at(vect, i), data) == 0)
 		{
 			vect_erase(vect, i);
-			return true;
+			success = true;
+			break;
 		}
 
-	return false;
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
+
+	return success;
 }
 
 /*
@@ -280,29 +371,34 @@ bool vect_remove(Vector* const vect, const void* const data)
  */
 void vect_erase(Vector* const vect, const unsigned int index)
 {
-	bool exit = true;
-	if (index > vect_size(vect))
-		ds_error(DS_MSG_OUT_OF_BOUNDS);
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
+
+	if (index > vect->size)
+		io_error(IO_MSG_OUT_OF_BOUNDS);
 	else if (index == 0)
 		vect_pop_front(vect);
-	else if (index == vect_size(vect) - 1)
+	else if (index == vect->size - 1)
 		vect_pop_back(vect);
-	else exit = false;
-	if (exit) return;
-
-	/* Check if shifting left is quicker. */
-	if (vect->size - 1 - index <= index)
-	{
-		vect_shift(vect, vect->end, vect_index(vect, index), true);
-		vect->end = wrap_add(vect->end, -1, 0, vect->capacity - 1);
-	}
 	else
 	{
-		vect_shift(vect, vect->start, vect_index(vect, index), false);
-		vect->start = wrap_add(vect->start, 1, 0, vect->capacity - 1);
+		/* Check if shifting left is quicker. */
+		if (vect->size - 1 - index <= index)
+		{
+			vect_shift(vect, vect->end, vect_index(vect, index), true);
+			vect->end = wrap_add(vect->end, -1, 0, vect->capacity - 1);
+		}
+		else
+		{
+			vect_shift(vect, vect->start, vect_index(vect, index), false);
+			vect->start = wrap_add(vect->start, 1, 0, vect->capacity - 1);
+		}
+
+		vect->size--;
 	}
 
-	vect->size--;
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
@@ -313,9 +409,12 @@ void vect_push_back(Vector * const vect, const void * const data)
 {
 	if (data == NULL)
 	{
-		ds_error(DS_MSG_NULL_PTR);
+		io_error(IO_MSG_NULL_PTR);
 		return;
 	}
+
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
 
 	/* Check if we need to increase the array's capacity. */
 	if (vect_full(vect))
@@ -328,19 +427,25 @@ void vect_push_back(Vector * const vect, const void * const data)
 	
 	vect->table[vect->end] = data;
 	vect->size++;
+
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
  * Inserts the given element at the front of the Vector.
  * Ω(1), O(n)
  */
-void vect_push_front(Vector * const vect, const void * const data)
+void vect_push_front(Vector * const vect, const void *const data)
 {
 	if (data == NULL)
 	{
-		ds_error(DS_MSG_NULL_PTR);
+		io_error(IO_MSG_NULL_PTR);
 		return;
 	}
+
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
 
 	/* Check if we need to increase the array's capacity. */
 	if (vect_full(vect))
@@ -353,6 +458,9 @@ void vect_push_front(Vector * const vect, const void * const data)
 
 	vect->table[vect->start] = data;
 	vect->size++;
+
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
@@ -361,16 +469,19 @@ void vect_push_front(Vector * const vect, const void * const data)
  */
 void vect_pop_back(Vector* const vect)
 {
-	if (vect_empty(vect))
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
+
+	if (vect->size > 0)
 	{
-		ds_error(DS_MSG_EMPTY);
-		return;
+		/* When Vector has one or less element(s), start and end must point to the same index. */
+		if (vect->size-- > 1)
+			vect->end = wrap_add(vect->end, -1, 0, vect->capacity - 1);
 	}
-	
-	/* When Vector has one or less element(s), start and end must point to the same index. */
-	if (vect_size(vect) > 1)
-		vect->end = wrap_add(vect->end, -1, 0, vect->capacity - 1);
-	vect->size--;
+	else io_error(IO_MSG_EMPTY);
+
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
@@ -379,42 +490,58 @@ void vect_pop_back(Vector* const vect)
 */
 void vect_pop_front(Vector* const vect)
 {
-	if (vect_empty(vect))
-	{
-		ds_error(DS_MSG_EMPTY);
-		return;
-	}
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
 
-	/* When Vector has one or less element(s), start and end must point to the same index. */
-	if (vect_size(vect) > 1)
-		vect->start = wrap_add(vect->start, 1, 0, vect->capacity - 1);
-	vect->size--;
+	if (vect->size > 0)
+	{
+		/* When Vector has one or less element(s), start and end must point to the same index. */
+		if (vect->size-- > 1)
+			vect->start = wrap_add(vect->start, 1, 0, vect->capacity - 1);
+	}
+	else io_error(IO_MSG_EMPTY);
+
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
  * Append data from another Vector to the end of this Vector.
  * Θ(n)
  */
-void vect_append(const Vector* const vect, const Vector* const data)
+void vect_append(Vector* const vect, const Vector* const other)
 {
-	const size_t combined = vect_size(vect) + vect_size(data);
+	/* Lock the other structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
+
+	const size_t combined = vect->size + other->size;
 	if (vect->capacity < combined)
 		vect_grow_to(vect, combined);
-	for (unsigned int i = 0, size = vect_size(data); i < size; i++)
-		vect_push_back(vect, vect_at(data, i));
+	for (unsigned int i = 0, size = other->size; i < size; i++)
+		vect_push_back(vect, vect_at(other, i));
+
+	/* Unlock the other structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
 * Append data from an array to the end of this Vector.
 * Θ(n)
 */
-void vect_append_array(const Vector* const vect, const void** const data, const size_t size)
+void vect_append_array(Vector* const vect, const void** const data, const size_t size)
 {
-	const size_t combined = vect_size(vect) + size;
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
+
+	/* Grow the vector to accommodate current and appended elements. */
+	const size_t combined = vect->size + size;
 	if (vect->capacity < combined)
 		vect_grow_to(vect, combined);
 	for (unsigned int i = 0; i < size; i++)
 		vect_push_back(vect, data[i]);
+
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
@@ -423,9 +550,15 @@ void vect_append_array(const Vector* const vect, const void** const data, const 
  */
 void vect_clear(Vector* const vect)
 {
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
+
 	vect->start = 0;
 	vect->end = 0;
 	vect->size = 0;
+
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
@@ -435,7 +568,13 @@ void vect_clear(Vector* const vect)
  */
 void vect_sort(const Vector* const vect)
 {
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
+
 	vect_quick_sort(vect, 0, vect->size);
+
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
@@ -446,12 +585,18 @@ void vect_sort(const Vector* const vect)
  */
 void vect_shuffle(const Vector* const vect)
 {
-	const size_t size = vect_size(vect);
+    /* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
+
+	const size_t size = vect->size;
 	for (unsigned int i = size - 1; i > 0; i--)
 	{
 		const unsigned int swap_location = rand_limit(i + 1);
 		vect_swap(vect, i, swap_location);
 	}
+
+    /* Unlock the data structure. */
+    sync_write_end(vect->rw_sync);
 }
 
 /*
@@ -460,8 +605,9 @@ void vect_shuffle(const Vector* const vect)
  */
 void vect_destroy(const Vector* const vect)
 {
-	ds_free(vect->table, vect->capacity * sizeof(void*));
-	ds_free((void*)vect, sizeof(Vector));
+	mem_free(vect->table, vect->capacity * sizeof(void*));
+	sync_destroy(vect->rw_sync);
+	mem_free((void*)vect, sizeof(Vector));
 }
 
 /*
@@ -477,7 +623,7 @@ bool vect_full(const Vector* const vect)
  * Grows the underlying array by a factor of `VECTOR_GROW_AMOUNT`.
  * Θ(n)
  */
-void vect_grow(const Vector* const vect)
+void vect_grow(Vector* const vect)
 {
 	/* Expand the underlying array by a set amount. */
 	vect_grow_to(vect, vect->capacity * VECTOR_GROW_AMOUNT);
@@ -490,28 +636,40 @@ void vect_grow(const Vector* const vect)
  */
 void vect_grow_to(Vector* const vect, const size_t min_size)
 {
+	/* Lock the data structure to future readers/writers. */
+	sync_write_start(vect->rw_sync);
+
+	/* Disregard invalid sizes. */
 	if (min_size <= vect->capacity)
+	{
+		/* Unlock the data structure. */
+		sync_write_end(vect->rw_sync);
 		return;
+	}
+
 	/* 
 	 * Solve for the expanded capacity.
-	 * The Vector only expands in increments of 10 * 2^n.
-	 * Ex. `min_size` of 73 means expanded capacity of 80.
+	 * The Vector only expands in increments of base_capacity * 2^n.
+	 * Ex. `min_size` of 73 means expanded capacity of 80 if base_capacity is 10.
 	 */
 	const size_t expanded_capacity = DEFAULT_INITIAL_CAPACITY * 
 		(unsigned int)pow(VECTOR_GROW_AMOUNT, 1 + floor(
 			log((double)min_size / DEFAULT_INITIAL_CAPACITY) / log(VECTOR_GROW_AMOUNT)));
 
-	const void** const expanded_table = ds_calloc(expanded_capacity, sizeof(void*));
-	for (unsigned int i = 0, len = vect_size(vect); i < len; i++)
+	const void** const expanded_table = mem_calloc(expanded_capacity, sizeof(void*));
+	for (unsigned int i = 0, len = vect->size; i < len; i++)
 		expanded_table[i] = vect_at(vect, i);
 
 	/* Destroy the old table. */
-	ds_free(vect->table, vect->capacity * sizeof(void*));
+	mem_free(vect->table, vect->capacity * sizeof(void*));
 	/* Update the Vector's properties. */
 	vect->table = expanded_table;
 	vect->capacity = expanded_capacity;
 	vect->start = 0;
-	vect->end = !vect_empty(vect) ? vect_size(vect) - 1 : 0;
+	vect->end = !vect_empty(vect) ? vect->size - 1 : 0;
+
+	/* Unlock the data structure. */
+	sync_write_end(vect->rw_sync);
 }
 
 /*
@@ -637,8 +795,8 @@ void vect_merge_sort(const Vector* const vect, const unsigned int start, const s
 	vect_merge_sort(vect, start_right, size_right);
 
 	/* Create two sub-arrays to assist in the merge process. */
-	const void** const arr_left = ds_calloc(size_left, sizeof(void*));
-	const void** const arr_right = ds_calloc(size_right, sizeof(void*));
+	const void** const arr_left = mem_calloc(size_left, sizeof(void*));
+	const void** const arr_right = mem_calloc(size_right, sizeof(void*));
 	for (unsigned int i = 0; i < size_left; i++)
 		arr_left[i] = vect_at(vect, start + i);
 	for (unsigned int i = 0; i < size_right; i++)
@@ -659,8 +817,8 @@ void vect_merge_sort(const Vector* const vect, const unsigned int start, const s
 		vect_assign(vect, iter++, arr_right[vect_iter_right++]);
 
 	/* Clean up memory and return the sorted array. */
-	ds_free(arr_left, size_left * sizeof(void*));
-	ds_free(arr_right, size_right * sizeof(void*));
+	mem_free(arr_left, size_left * sizeof(void*));
+	mem_free(arr_right, size_right * sizeof(void*));
 }
 
 /*
@@ -672,7 +830,7 @@ void vect_merge_sort(const Vector* const vect, const unsigned int start, const s
 void vect_shift(Vector* const vect, const unsigned int start, const unsigned int stop, const bool leftwards)
 {
 	/* Iterator will aid in safely looping through array. */
-	const Iterator iter = { stop, vect };
+	Iterator iter = { stop, vect };
 	/* Shifting left means iterating rightwards and vice versa.
 	 * Function pointer makes this process much easier to read. */
 	void(*iterate)(Iterator* const);

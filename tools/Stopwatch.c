@@ -16,7 +16,7 @@ struct Stopwatch
 /* Constructor function. */
 Stopwatch* Stopwatch_new()
 {
-	Stopwatch* const sw = ds_calloc(1, sizeof(Stopwatch));
+	Stopwatch* const sw = mem_calloc(1, sizeof(Stopwatch));
 	return sw;
 }
 
@@ -27,12 +27,12 @@ Stopwatch* Stopwatch_new()
  */
 clock_t sw_elapsed(const Stopwatch* const sw)
 {
-	bool error = true;
+	bool error = TRUE;
 	if (sw->start == NULL)
-		ds_error(SW_MSG_NOT_STARTED);
+		io_error(SW_MSG_NOT_STARTED);
 	else if (sw->end == NULL)
-		ds_error(SW_MSG_ALREADY_RUNNING);
-	else error = false;
+		io_error(SW_MSG_ALREADY_RUNNING);
+	else error = FALSE;
 	if (error) return -1;
 	
 	return TO_MILLISECONDS * (*sw->end - *sw->start) / CLOCKS_PER_SEC;
@@ -59,10 +59,10 @@ void sw_start(struct Stopwatch * const sw)
 {
 	if (sw->start != NULL)
 	{
-		ds_error(SW_MSG_ALREADY_RUNNING);
+		io_error(SW_MSG_ALREADY_RUNNING);
 		return;
 	}
-	sw->start = ds_malloc(sizeof(clock_t));
+	sw->start = mem_malloc(sizeof(clock_t));
 	*sw->start = clock();
 }
 
@@ -74,15 +74,15 @@ void sw_start(struct Stopwatch * const sw)
  */
 clock_t sw_stop(struct Stopwatch * const sw)
 {
-	bool error = true;
+	bool error = TRUE;
 	if (sw->start == NULL)
-		ds_error(SW_MSG_NOT_STARTED);
+		io_error(SW_MSG_NOT_STARTED);
 	else if (sw->end != NULL)
-		ds_error(SW_MSG_ALREADY_ENDED);
-	else error = false;
+		io_error(SW_MSG_ALREADY_ENDED);
+	else error = FALSE;
 	if (error) return -1;
 
-	sw->end = ds_malloc(sizeof(clock_t));
+	sw->end = mem_malloc(sizeof(clock_t));
 	*sw->end = clock();
 	return sw_elapsed(sw);
 }
@@ -95,25 +95,25 @@ void sw_reset(Stopwatch* const sw)
 {
 	if (sw->start == NULL)
 	{
-		ds_error(SW_MSG_NOT_STARTED);
+		io_error(SW_MSG_NOT_STARTED);
 		return;
 	}
-	ds_free(sw->start, sizeof(clock_t));
+	mem_free(sw->start, sizeof(clock_t));
 	sw->start = NULL;
 	
 	if (sw->end != NULL)
 	{
-		ds_free(sw->end, sizeof(clock_t));
+		mem_free(sw->end, sizeof(clock_t));
 		sw->end = NULL;
 	}
 }
 
 /* De-constructor function. */
-void sw_destroy(const struct Stopwatch * const sw)
+void sw_destroy(Stopwatch* const sw)
 {
 	if (sw->start != NULL)
-		ds_free(sw->start, sizeof(clock_t));
+		mem_free(sw->start, sizeof(clock_t));
 	if (sw->end != NULL)
-		ds_free(sw->end, sizeof(clock_t));
-	ds_free(sw, sizeof(Stopwatch));
+		mem_free(sw->end, sizeof(clock_t));
+	mem_free(sw, sizeof(Stopwatch));
 }

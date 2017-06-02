@@ -1,17 +1,17 @@
 
 /*
-Author: Kevin Tyrrell
-Date: 3/07/2016
-Version: 2.0
-*/
+ * Author: Kevin Tyrrell
+ * Date: 3/07/2016
+ * Version: 2.0
+ */
 
 #pragma once
 
-#include "Tools.h"
+#include "Memory.h"
 
 #include <time.h>
 
-/* Private structures. */
+/* Private structure. */
 typedef struct Stopwatch Stopwatch;
 
 /* ~~~~~ Constructors ~~~~~ */
@@ -36,4 +36,4 @@ void sw_reset(Stopwatch* const sw);
 
 /* ~~~~~ De-constructors ~~~~~ */
 
-void sw_destroy(const Stopwatch* const sw);
+void sw_destroy(Stopwatch* const sw);
