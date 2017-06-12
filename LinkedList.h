@@ -1,13 +1,14 @@
 
 /*
-Author: Kevin Tyrrell
-Date: 7/21/2016
-Version: 3.0
-*/
+ * Author: Kevin Tyrrell
+ * Date: 7/21/2016
+ * Version: 4.0
+ */
 
 #pragma once
 
-#include "Tools.h"
+#include "tools/Memory.h"
+#include "tools/Synchronize.h"
 #include "C-Random/Random.h"
 
 /*
@@ -16,6 +17,8 @@ Version: 3.0
 * Elements are added dynamically without wasted memory.
 * Constructor: LinkedList_new, De-constructor: ll_destroy.
 */
+
+/* Anonymous structures. */
 typedef struct LinkedList LinkedList;
 /* Iterator for the LinkedList. */
 typedef struct ll_Iterator ll_Iterator;
@@ -23,10 +26,10 @@ typedef struct ll_Iterator ll_Iterator;
 /* ~~~~~ Constructors ~~~~~ */
 
 /*
-Must pass in two function pointers.
-The first compares two data elements and returns true if they are the same.
-The second function must return the String representation of the data.
-*/
+ * Constructs a new LinkedList.
+ * Compare - Compares two elements. Returns -1, 0, or 1 based on how they compare.
+ * toString - Returns the String representation of a given element.
+ */
 LinkedList* LinkedList_new(int(*compare)(const void*, const void*),
 	char*(*toString)(const void*));
 

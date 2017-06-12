@@ -1,9 +1,9 @@
 
 /*
- * File: Memory.h
- * Date: Jun 01, 2017
+ * File: Math.c
+ * Date: Jun 09, 2017
  * Name: Kevin Tyrrell
- * Version: 2.0.0
+ * Version: 1.0.0
  */
 
 /*
@@ -28,23 +28,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#pragma once
+#include "Math.h"
 
-#include "IO.h"
+/*
+ * Returns the base to the power of the exponent.
+ * Integer-based power function.
+ */
+unsigned long long math_pow(unsigned long long base, unsigned int exp)
+{
+    unsigned long long result = 1;
 
-#include <stdlib.h>
+    while (exp > 0)
+    {
+        /* If the exponent is odd. */
+        if (exp & 1 != 0)
+            result *= base;
+        exp >>= 1;
+        base *= base;
+    }
 
-#define MEM_MSG_BLOCKS_UNAVAILABLE "Not enough memory to allocate for this variable!"
-
-/* ~~~~~ Memory Management ~~~~~ */
-
-/* Memory allocation function. */
-void* mem_malloc(const size_t size);
-/* Memory allocation function.*/
-void* mem_calloc(const size_t items, const size_t size);
-/* Memory allocation function. */
-void* mem_realloc(void *const ptr, const size_t oldSize, const size_t newSize);
-/* Memory de-allocation function. */
-void mem_free(void *const ptr, const size_t size);
-/* Prints out the status of the program's memory management. */
-void mem_status();
+    return result;
+}

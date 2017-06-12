@@ -2,8 +2,8 @@
 #include "LinkedList.h"
 #include "C-Random/Random.h"
 
-#define START true
-#define END false
+#define FRONT true
+#define BACK false
 
 /* Node structure. */
 typedef struct ll_Node
@@ -18,8 +18,9 @@ struct LinkedList
 	ll_Node *root, *tail;
 	size_t size;
 
-	// TODO: Invalidation listener.
-
+	/* Synchronization. */
+	ReadWriteSync *rw_sync;
+	
 	/* Function pointers. */
 	int(*compare)(const void*, const void*);
 	char*(*toString)(const void*);
@@ -36,8 +37,10 @@ struct ll_Iterator
 /* Local functions. */
 static ll_Node* Node_new(void* const data);
 static ll_Node* ll_search(const LinkedList* const list, const size_t index);
+static ll_Node* ll_locate(const LinkedList* const list, const void* const data);
+static void ll_Node_destroy(ll_Node* const node);
 static void ll_link(ll_Node* const left, ll_Node* const right);
-static void ll_separate(LinkedList* const list, LinkedList* const l1, LinkedList* const l2);
+static void ll_separate(LinkedList* const to_be_emptied, LinkedList* const l1, LinkedList* const l2);
 static void* ll_pull_front(LinkedList* const list);
 static void* ll_pull_back(LinkedList* const list);
 
@@ -45,19 +48,12 @@ static void* ll_pull_back(LinkedList* const list);
 LinkedList* LinkedList_new(int(*compare)(const void*, const void*),
 	char*(*toString)(const void*))
 {
-	LinkedList *list = ds_calloc(1, sizeof(LinkedList));
+	LinkedList *list = mem_calloc(1, sizeof(LinkedList));
 	/* Pointer functions. */
 	list->compare = compare;
 	list->toString = toString;
+    list->rw_sync = ReadWriteSync_new();
 	return list;
-}
-
-/* Constructor function. */
-ll_Node* Node_new(void* const data)
-{
-	ll_Node *node = ds_calloc(1, sizeof(ll_Node));
-	node->data = data;
-	return node;
 }
 
 /*
@@ -66,9 +62,18 @@ ll_Node* Node_new(void* const data)
  */
 void* ll_front(const LinkedList* const list)
 {
-	if (ll_empty(list))
-		ds_error(DS_MSG_EMPTY);
-	return list->root->data;
+    assert(list != NULL && IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(list->rw_sync);
+
+    assert(list->size > 0 && IO_MSG_EMPTY);
+    void* const val = list->root->data;
+
+    /* Unlock the data structure. */
+    sync_read_end(list->rw_sync);
+
+    return val;
 }
 
 /*
@@ -77,9 +82,19 @@ void* ll_front(const LinkedList* const list)
  */
 void* ll_back(const LinkedList* const list)
 {
-	if (ll_empty(list))
-		ds_error(DS_MSG_EMPTY);
-	return list->tail->data;
+    assert(list != NULL && IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(list->rw_sync);
+
+    assert(list->size > 0 && IO_MSG_EMPTY);
+
+    void* const val = list->tail->data;
+
+    /* Unlock the data structure. */
+    sync_read_end(list->rw_sync);
+
+    return val;
 }
 
 /*
@@ -88,16 +103,26 @@ void* ll_back(const LinkedList* const list)
  */
 void* ll_at(const LinkedList* const list, const size_t index)
 {
-	if (ll_empty(list))
-	{
-		ds_error(DS_MSG_EMPTY);
-		return NULL;
-	}
-	if (index == 0)
-		return ll_front(list);
-	if (index == list->size - 1)
-		return ll_back(list);
-	return ll_search(list, index)->data;
+    assert(list != NULL && IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(list->rw_sync);
+
+    assert(list->size > 0 && IO_MSG_EMPTY);
+
+    void *val = NULL;
+
+    if (index == 0)
+        val = ll_front(list);
+    else if (index == list->size - 1)
+        val = ll_back(list);
+    else
+        val = ll_search(list, index)->data;
+
+    /* Unlock the data structure. */
+    sync_read_end(list->rw_sync);
+
+    return val;
 }
 
 /*
@@ -106,16 +131,28 @@ void* ll_at(const LinkedList* const list, const size_t index)
  */
 bool ll_contains(const LinkedList* const list, const void* const data)
 {
-	const ll_Iterator *iter = ll_iter(list, START);
+    assert(list != NULL && IO_MSG_NULL_PTR);
+    assert(data != NULL && IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(list->rw_sync);
+
+    bool val = false;
+
+	const ll_Iterator *iter = ll_iter(list, FRONT);
 	while (ll_iter_has_next(iter))
 		if (list->compare(ll_iter_next(iter), data) == 0)
 		{
-			ll_iter_destroy(iter);
-			return true;
+			val = true;
+            break;
 		}
 
 	ll_iter_destroy(iter);
-	return false;
+
+    /* Unlock the data structure. */
+    sync_read_end(list->rw_sync);
+    
+    return val;
 }
 
 /*
@@ -124,7 +161,17 @@ bool ll_contains(const LinkedList* const list, const void* const data)
  */
 size_t ll_size(const LinkedList* const list)
 {
-	return list->size;
+    assert(list != NULL && IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(list->rw_sync);
+
+	const size_t size = list->size;
+
+    /* Unlock the data structure. */
+    sync_read_end(list->rw_sync);
+
+    return size;
 }
 
 /*
@@ -133,7 +180,17 @@ size_t ll_size(const LinkedList* const list)
  */
 bool ll_empty(const LinkedList* const list)
 {
-	return ll_size(list) == 0;
+    assert(list != NULL && IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(list->rw_sync);
+
+    const bool val = list->size == 0;
+
+    /* Unlock the data structure. */
+    sync_read_end(list->rw_sync);
+
+    return val;
 }
 
 /*
@@ -142,14 +199,22 @@ bool ll_empty(const LinkedList* const list)
  */
 LinkedList* ll_clone(const LinkedList* const list)
 {
+    assert(list != NULL && IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(list->rw_sync);
+
 	LinkedList* const copy = LinkedList_new(list->compare, list->toString);
-	ll_Iterator* const iter = ll_iter(list, START);
+	ll_Iterator* const iter = ll_iter(list, FRONT);
 
 	while (ll_iter_has_next(iter))
 		ll_push_back(copy, ll_iter_next(iter));
 	ll_iter_destroy(iter);
 
-	return copy;
+    /* Unlock the data structure. */
+    sync_read_end(list->rw_sync);
+
+    return copy;
 }
 
 /*
@@ -158,6 +223,11 @@ LinkedList* ll_clone(const LinkedList* const list)
  */
 void ll_print(const LinkedList* const list)
 {
+    assert(list != NULL && IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(list->rw_sync);
+
 	printf("{ ");
 
 	ll_Iterator* const iter = ll_iter(list, true);
@@ -170,6 +240,9 @@ void ll_print(const LinkedList* const list)
 
 	ll_iter_destroy(iter);
 	printf(" }\n");
+
+    /* Unlock the data structure. */
+    sync_read_end(list->rw_sync);
 }
 
 /*
@@ -179,21 +252,25 @@ void ll_print(const LinkedList* const list)
  */
 void** ll_array(const LinkedList* const list)
 {
-	if (ll_empty(list))
-	{
-		ds_error(DS_MSG_EMPTY);
-		return NULL;
-	}
+    assert(list != NULL && IO_MSG_NULL_PTR);
 
-	void** const arr = malloc(ll_size(list) * sizeof(void*));
-	
-	unsigned int index = 0;
-	ll_Iterator* const iter = ll_iter(list, START);
-	while (ll_iter_has_next(iter))
-		arr[index++] = ll_iter_next(iter);
-	ll_iter_destroy(iter);
+    /* Lock the data structure to future writers. */
+    sync_read_start(list->rw_sync);
 
-	return arr;
+    assert(list->size > 0 && IO_MSG_EMPTY);
+
+    void **arr = malloc(list->size * sizeof(void*));
+
+    unsigned int index = 0;
+    ll_Iterator* const iter = ll_iter(list, FRONT);
+    while (ll_iter_has_next(iter))
+        arr[index++] = ll_iter_next(iter);
+    ll_iter_destroy(iter);
+
+    /* Unlock the data structure. */
+    sync_read_end(list->rw_sync);
+
+    return arr;
 }
 
 /*
@@ -202,15 +279,24 @@ void** ll_array(const LinkedList* const list)
  */
 void ll_push_front(LinkedList* const list, const void* const data)
 {
-	ll_Node* const insert = Node_new(data);
+    assert(list != NULL && IO_MSG_NULL_PTR);
+    assert(data != NULL && IO_MSG_NULL_PTR);
 
-	if (!ll_empty(list))
-		ll_link(insert, list->root);
-	else
-		list->tail = insert;
+    ll_Node* const insert = Node_new(data);
+
+    /* Lock the data structure to future readers/writers. */
+    sync_write_start(list->rw_sync);
+
+    if (list->size > 0)
+        ll_link(insert, list->root);
+    else
+        list->tail = insert;
 
 	list->root = insert;
 	list->size++;
+
+    /* Unlock the data structure. */
+    sync_write_end(list->rw_sync);
 }
 
 /*
@@ -219,15 +305,24 @@ void ll_push_front(LinkedList* const list, const void* const data)
  */
 void ll_push_back(LinkedList* const list, const void* const data)
 {
+    assert(list != NULL && IO_MSG_NULL_PTR);
+    assert(data != NULL && IO_MSG_NULL_PTR);
+
 	ll_Node* const insert = Node_new(data);
 
-	if (!ll_empty(list))
+    /* Lock the data structure to future readers/writers. */
+    sync_write_start(list->rw_sync);
+
+	if (list->size > 0)
 		ll_link(list->tail, insert);
 	else
 		list->root = insert;
 
 	list->tail = insert;
 	list->size++;
+
+    /* Unlock the data structure. */
+    sync_write_end(list->rw_sync);
 }
 
 /*
@@ -236,8 +331,15 @@ void ll_push_back(LinkedList* const list, const void* const data)
  */
 void ll_assign(const LinkedList* const list, const size_t index, const void* const data)
 {
+    /* Lock the data structure to future readers/writers. */
+    sync_write_start(list->rw_sync);
+
 	ll_Node* const located = ll_search(list, index);
-	located->data = data;
+    if (located != NULL)
+	    located->data = data;
+
+    /* Unlock the data structure. */
+    sync_write_end(list->rw_sync);
 }
 
 /*
@@ -246,20 +348,29 @@ void ll_assign(const LinkedList* const list, const size_t index, const void* con
  */
 void ll_insert(LinkedList* const list, const unsigned int index, const void* const data)
 {
-	if (index > ll_size(list))
-		ds_error(DS_MSG_OUT_OF_BOUNDS);
-	else if (ll_empty(list) || index == 0)
+    /* Lock the data structure to future readers/writers. */
+    sync_write_start(list->rw_sync);
+
+	if (index > list->size)
+		io_error(IO_MSG_OUT_OF_BOUNDS);
+	else if (list->size == 0 || index == 0)
 		ll_push_front(list, data);
-	else if (index == ll_size(list))
+	else if (index == list->size)
 		ll_push_back(list, data);
 	else
 	{
-		ll_Node* const i = ll_search(list, index),
-			*const inserted = Node_new(data);
-		ll_link(i->prev, inserted);
-		ll_link(inserted, i);
-		list->size++;
+        ll_Node* const neighbor = ll_search(list, index);
+        if (neighbor != NULL)
+        {
+            ll_Node* const inserted = Node_new(data);
+            ll_link(i->prev, inserted);
+            ll_link(inserted, i);
+            list->size++;
+        }
 	}
+
+    /* Unlock the data structure. */
+    sync_write_end(list->rw_sync);
 }
 
 /*
@@ -268,27 +379,29 @@ void ll_insert(LinkedList* const list, const unsigned int index, const void* con
  */
 void ll_pop_front(LinkedList* const list)
 {
-	if (ll_empty(list))
-	{
-		ds_error(DS_MSG_EMPTY);
-		return;
-	}
+    /* Lock the data structure to future readers/writers. */
+    sync_write_start(list->rw_sync);
 
-	const ll_Node* const root = list->root;
-	if (ll_size(list) == 1)
-	{
-		list->root = NULL;
-		list->tail = NULL;
-	}
-	else
-	{
-		ll_Node* const neighbor = root->next;
-		neighbor->prev = NULL;
-		list->root = neighbor;
-	}
+    if (list->size > 0)
+    {
+        const ll_Node* const root = list->root;
+        if (list->size == 1)
+        {
+            list->root = NULL;
+            list->tail = NULL;
+        }
+        else
+        {
+            list->root = root->next;
+            list->root->prev = NULL;
+        }
 
-	ds_free(root, sizeof(ll_Node));
-	list->size--;
+        ll_Node_destroy(root);
+        list->size--;
+    } else io_error(IO_MSG_EMPTY);
+
+    /* Unlock the data structure. */
+    sync_write_end(list->rw_sync);
 }
 
 /*
@@ -297,27 +410,29 @@ void ll_pop_front(LinkedList* const list)
  */
 void ll_pop_back(LinkedList* const list)
 {
-	if (ll_empty(list))
-	{
-		ds_error(DS_MSG_EMPTY);
-		return;
-	}
+    /* Lock the data structure to future readers/writers. */
+    sync_write_start(list->rw_sync);
 
-	const ll_Node* const tail = list->tail;
-	if (ll_size(list) == 1)
-	{
-		list->root = NULL;
-		list->tail = NULL;
-	}
-	else
-	{
-		ll_Node* const neighbor = tail->prev;
-		neighbor->next = NULL;
-		list->tail = neighbor;
-	}
+    if (list->size > 0)
+    {
+        const ll_Node* const tail = list->tail;
+        if (list->size == 1)
+        {
+            list->root = NULL;
+            list->tail = NULL;
+        }
+        else
+        {
+            list->tail = tail->prev;
+            list->tail->next = NULL;
+        }
 
-	ds_free(tail, sizeof(ll_Node));
-	list->size--;
+        ll_Node_destroy(tail);
+        list->size--;
+    } else io_error(IO_MSG_EMPTY);
+
+    /* Unlock the data structure. */
+    sync_write_end(list->rw_sync);
 }
 
 /*
@@ -327,13 +442,26 @@ void ll_pop_back(LinkedList* const list)
  */
 bool ll_remove(LinkedList* const list, const void* const data)
 {
+    /* Lock the data structure to future readers/writers. */
+    sync_write_start(list->rw_sync);
+
+	bool success = false;
+
+	if (list->size > 0)
+	{
+
+	}
+	else io_error(IO_MSG_EMPTY);
+
+
+
 	if (ll_empty(list))
 	{
-		ds_error(DS_MSG_EMPTY);
+		io_error(DS_MSG_EMPTY);
 		return false;
 	}
 
-	ll_Iterator *iter = ll_iter(list, START);
+	ll_Iterator *iter = ll_iter(list, FRONT);
 	while (ll_iter_has_next(iter))
 	{
 		ll_Node *temp = iter->last;
@@ -341,12 +469,12 @@ bool ll_remove(LinkedList* const list, const void* const data)
 		{
 			if (ll_iter_index(iter) == 0)
 				ll_pop_front(list);
-			else if (ll_iter_index(iter) == ll_size(list) - 1)
+			else if (ll_iter_index(iter) == list->size - 1)
 				ll_pop_back(list);
 			else
 			{
 				ll_link(temp->prev, temp->next);
-				ds_free(temp, sizeof(ll_Node));
+				mem_free(temp, sizeof(ll_Node));
 				list->size--;
 			}
 
@@ -358,7 +486,11 @@ bool ll_remove(LinkedList* const list, const void* const data)
 	}
 
 	ll_iter_destroy(iter);
-	return false;
+
+	/* Unlock the data structure. */
+	sync_write_end(list->rw_sync);
+
+	return success;
 }
 
 /*
@@ -367,19 +499,19 @@ bool ll_remove(LinkedList* const list, const void* const data)
  */
 void ll_erase(LinkedList* const list, const size_t index)
 {
-	if (index >= ll_size(list))
-		ds_error(DS_MSG_OUT_OF_BOUNDS);
+	if (index >= list->size)
+		io_error(DS_MSG_OUT_OF_BOUNDS);
 	else if (ll_empty(list))
-		ds_error(DS_MSG_EMPTY);
+		io_error(DS_MSG_EMPTY);
 	else if (index == 0)
 		ll_pop_front(list);
-	else if (index == ll_size(list) - 1)
+	else if (index == list->size - 1)
 		ll_pop_back(list);
 	else
 	{
 		const ll_Node* const located = ll_search(list, index);
 		ll_link(located->prev, located->next);
-		ds_free(located, sizeof(ll_Node));
+		mem_free(located, sizeof(ll_Node));
 		list->size--;
 	}
 }
@@ -390,13 +522,13 @@ void ll_erase(LinkedList* const list, const size_t index)
  */
 void ll_clear(LinkedList* const list)
 {
-	ll_Iterator* const iter = ll_iter(list, START);
+	ll_Iterator* const iter = ll_iter(list, FRONT);
 	
 	while (ll_iter_has_next(iter))
 	{
 		ll_iter_next(iter);
 		bool leave = !ll_iter_has_next(iter);
-		ds_free(iter->last, sizeof(ll_Node));
+		mem_free(iter->last, sizeof(ll_Node));
 		if (leave) break;
 	}
 	ll_iter_destroy(iter);
@@ -413,7 +545,7 @@ void ll_clear(LinkedList* const list)
  */
 void ll_sort(LinkedList* const list)
 {
-	if (ll_size(list) <= 1)
+	if (list->size <= 1)
 		return;
 
 	/* Create two sub-lists of the main list. */
@@ -450,7 +582,7 @@ void ll_sort(LinkedList* const list)
 #define DUMMY_SIZE 1
 void ll_shuffle(LinkedList* const list)
 {
-	if (ll_size(list) <= 1)
+	if (list->size <= 1)
 		return;
 
 	/* Create two sub-lists of the main list. */
@@ -471,7 +603,7 @@ void ll_shuffle(LinkedList* const list)
 	void* dummy = NULL;
 	if (ll_size(left) > ll_size(right))
 	{
-		dummy = ds_malloc(DUMMY_SIZE);
+		dummy = mem_malloc(DUMMY_SIZE);
 		const unsigned int dummy_loc = rand_limit(ll_size(right) + 1);
 		ll_insert(right, dummy_loc, dummy);
 	}
@@ -493,10 +625,10 @@ void ll_shuffle(LinkedList* const list)
 
 	if (dummy == NULL) return;
 	/* Remove the dummy variable if we needed one. */
-	ll_Iterator* const iter = ll_iter(list, START);
+	ll_Iterator* const iter = ll_iter(list, FRONT);
 	while (ll_iter_next(iter) != dummy);
 	ll_iter_remove(iter);
-	ds_free(dummy, DUMMY_SIZE);
+	mem_free(dummy, DUMMY_SIZE);
 	ll_iter_destroy(iter);
 }
 
@@ -507,7 +639,7 @@ void ll_shuffle(LinkedList* const list)
 void ll_destroy(LinkedList* const list)
 {
 	ll_clear(list);
-	ds_free(list, sizeof(LinkedList));
+	mem_free(list, sizeof(LinkedList));
 }
 
 /*
@@ -517,14 +649,14 @@ void ll_destroy(LinkedList* const list)
  */
 ll_Iterator* ll_iter(const LinkedList* const list, const bool front)
 {
-	ll_Iterator* const iter = ds_calloc(1, sizeof(ll_Iterator));
+	ll_Iterator* const iter = mem_calloc(1, sizeof(ll_Iterator));
 
 	if (front)
 		iter->last = list->root;
 	else
 	{
 		iter->last = list->tail;
-		iter->index = ll_size(list) - 1;
+		iter->index = list->size - 1;
 	}
 
 	iter->list = list;
@@ -539,7 +671,7 @@ void* ll_iter_next(ll_Iterator* const iter)
 {
 	if (!ll_iter_has_next(iter))
 	{
-		ds_error(DS_MSG_OUT_OF_BOUNDS);
+		io_error(DS_MSG_OUT_OF_BOUNDS);
 		return NULL;
 	}
 
@@ -570,7 +702,7 @@ void* ll_iter_prev(ll_Iterator* const iter)
 {
 	if (!ll_iter_has_prev(iter))
 	{
-		ds_error(DS_MSG_OUT_OF_BOUNDS);
+		io_error(DS_MSG_OUT_OF_BOUNDS);
 		return NULL;
 	}
 
@@ -628,7 +760,7 @@ unsigned ll_iter_index(const ll_Iterator* const iter)
  */
 void ll_iter_destroy(const ll_Iterator* const iter)
 {
-	ds_free(iter, sizeof(ll_Iterator));
+	mem_free(iter, sizeof(ll_Iterator));
 }
 
 /*
@@ -680,7 +812,7 @@ void ll_iter_insert(ll_Iterator* const iter, const void* const data)
 void ll_iter_remove(ll_Iterator* const iter)
 {
 	if (ll_empty(iter->list))
-		ds_error(DS_MSG_EMPTY);
+		io_error(DS_MSG_EMPTY);
 	/* Last element iterated was the root. */
 	else if (iter->last->prev == NULL)
 	{
@@ -720,9 +852,17 @@ void ll_iter_remove(ll_Iterator* const iter)
 			ll_link(iter->current, iter->last);
 		}
 
-		ds_free(deceased, sizeof(ll_Node));
+		mem_free(deceased, sizeof(ll_Node));
 		iter->list->size--;
 	}
+}
+
+/* Constructor function. */
+ll_Node* Node_new(void* const data)
+{
+    ll_Node *node = mem_calloc(1, sizeof(ll_Node));
+    node->data = data;
+    return node;
 }
 
 /*
@@ -733,43 +873,83 @@ void ll_iter_remove(ll_Iterator* const iter)
  */
 ll_Node* ll_search(const LinkedList* const list, const size_t index)
 {
-	if (index >= list->size)
-	{
-		ds_error(DS_MSG_OUT_OF_BOUNDS);
-		return NULL;
-	}
+    if (index >= list->size)
+    {
+        io_error(DS_MSG_OUT_OF_BOUNDS);
+        return NULL;
+    }
 
-	void*(*navigate)(ll_Iterator* const);
-	bool location;
+    void*(*navigate)(ll_Iterator* const);
+    bool location;
 
-	/* Determine if seeking from the root is faster. */
-	if ((double)index / (list->size - 1) <= 0.5)
-	{
-		location = START;
-		navigate = &ll_iter_next;
-	}
-	else
-	{
-		location = END;
-		navigate = &ll_iter_prev;
-	}
+    /* Determine if seeking from the root is faster. */
+    if ((double)index / (list->size - 1) <= 0.5)
+    {
+        location = FRONT;
+        navigate = &ll_iter_next;
+    }
+    else
+    {
+        location = BACK;
+        navigate = &ll_iter_prev;
+    }
 
-	ll_Iterator* const iter = ll_iter(list, location);
-	while (ll_iter_index(iter) != index)
-		navigate(iter);
+    ll_Iterator* const iter = ll_iter(list, location);
+    while (ll_iter_index(iter) != index)
+        navigate(iter);
 
-	/* If current is NULL, last is the one that corresponds to the correct Node. */
-	ll_Node* const located = iter->current == NULL ? iter->last : iter->current;
-	ll_iter_destroy(iter);
-	return located;
+    /* If current is NULL, last is the one that corresponds to the correct Node. */
+    ll_Node* const located = iter->current == NULL ? iter->last : iter->current;
+    ll_iter_destroy(iter);
+    return located;
 }
 
 /*
- * Links the pointers of two Nodes together.
+ * Returns a Node in the list whose data matches the provided data.
+ * The compare function must be defined for this function.
+ * This function is NOT Synchronized.
+ * Ω(n)
+ */
+ll_Node *ll_locate(const LinkedList *const list, const void *const data)
+{
+	assert(list != NULL);
+	assert(data != NULL);
+	assert(list->compare != NULL);
+
+	ll_Node located = NULL;
+
+	ll_Iterator* const iter = ll_iter(list, FRONT);
+	while (ll_iter_has_next(iter))
+	{
+
+		if (list->compare(ll_iter_next(iter), data) == 0)
+		{
+
+		}
+	}
+
+
+}
+
+/*
+ * De-constructor function.
+ * Θ(1)
+ */
+void ll_Node_destroy(ll_Node *const node)
+{
+    mem_free(node, sizeof(ll_Node));
+}
+
+/*
+ * Links the pointers of a left-ward Node with a right-ward neighbor.
+ * 								(left)	(right)
+ * Before function call:		O		O
+ * After function call:			O -> <- O
  * Θ(1)
  */
 void ll_link(ll_Node* const left, ll_Node* const right)
 {
+	assert(left != NULL && right != NULL);
 	left->next = right;
 	right->prev = left;
 }
@@ -780,13 +960,15 @@ void ll_link(ll_Node* const left, ll_Node* const right)
  * The two smaller lists should be initialized before calling this function.
  * Ω(n)
  */
-void ll_separate(LinkedList* const list, LinkedList* const l1, LinkedList* const l2)
+void ll_separate(LinkedList* const to_be_emptied, LinkedList* const l1, LinkedList* const l2)
 {
-	while (!ll_empty(list))
+	assert(to_be_emptied != NULL && l1 != NULL && l2 != NULL);
+
+	while (!ll_empty(to_be_emptied))
 	{
-		ll_push_back(l1, ll_pull_front(list));
-		if (!ll_empty(list))
-			ll_push_back(l2, ll_pull_front(list));
+		ll_push_back(l1, ll_pull_front(to_be_emptied));
+		if (!ll_empty(to_be_emptied))
+			ll_push_back(l2, ll_pull_front(to_be_emptied));
 	}
 }
 

@@ -1,8 +1,37 @@
 
+/*
+ * File: Memory.c
+ * Date: Jun 01, 2017
+ * Name: Kevin Tyrrell
+ * Version: 2.0.0
+ */
+
+/*
+Copyright © 2017 Kevin Tyrrell
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include "Memory.h"
 
+#define MEM_MSG_INVALID_BLOCK_SIZE "Memory block size was invalid!"
 #define MEM_MSG_INVALID_MEMORY "Memory blocks allocated does not match expected values for this operation!"
-#define MEM_MSG_BLOCKS_UNAVAILABLE "Not enough memory to allocate for this variable!"
 
 /* Track memory usage in order to make sure we free all allocated memory. */
 size_t MEM_CURRENT_ALLOCATIONS = 0, MEM_TOTAL_ALLOCATIONS = 0, MEM_BLOCKS_ALLOCATED = 0;
@@ -15,12 +44,11 @@ size_t MEM_CURRENT_ALLOCATIONS = 0, MEM_TOTAL_ALLOCATIONS = 0, MEM_BLOCKS_ALLOCA
  */
 void* mem_malloc(const size_t size)
 {
+    io_assert(size > 0, MEM_MSG_INVALID_BLOCK_SIZE);
+
     void* const block = malloc(size);
-    if (block == NULL)
-    {
-        io_error(MEM_MSG_BLOCKS_UNAVAILABLE);
-        return NULL;
-    }
+    io_assert(block != NULL, MEM_MSG_BLOCKS_UNAVAILABLE);
+
     MEM_CURRENT_ALLOCATIONS++;
     MEM_TOTAL_ALLOCATIONS++;
     MEM_BLOCKS_ALLOCATED += size;
@@ -35,12 +63,12 @@ void* mem_malloc(const size_t size)
  */
 void* mem_calloc(const size_t items, const size_t size)
 {
+    io_assert(items > 0, MEM_MSG_INVALID_BLOCK_SIZE);
+    io_assert(size > 0, MEM_MSG_INVALID_BLOCK_SIZE);
+
     void* const block = calloc(items, size);
-    if (block == NULL)
-    {
-        io_error(MEM_MSG_BLOCKS_UNAVAILABLE);
-        return NULL;
-    }
+    io_assert(block != NULL, MEM_MSG_BLOCKS_UNAVAILABLE);
+
     MEM_CURRENT_ALLOCATIONS++;
     MEM_TOTAL_ALLOCATIONS++;
     MEM_BLOCKS_ALLOCATED += size * items;
@@ -55,11 +83,15 @@ void* mem_calloc(const size_t items, const size_t size)
  */
 void* mem_realloc(void *const ptr, const size_t oldSize, const size_t newSize)
 {
+    io_assert(ptr != NULL, IO_MSG_NULL_PTR);
+    io_assert(MEM_BLOCKS_ALLOCATED >= oldSize, MEM_MSG_INVALID_MEMORY);
+
     void* const block = realloc(ptr, newSize);
-    if (block == NULL)
-        io_error(MEM_MSG_BLOCKS_UNAVAILABLE);
-    MEM_BLOCKS_ALLOCATED += newSize;
+    io_assert(block != NULL, MEM_MSG_BLOCKS_UNAVAILABLE);
+
     MEM_BLOCKS_ALLOCATED -= oldSize;
+    MEM_BLOCKS_ALLOCATED += newSize;
+
     return block;
 }
 
@@ -72,13 +104,10 @@ void* mem_realloc(void *const ptr, const size_t oldSize, const size_t newSize)
  */
 void mem_free(void *const ptr, const size_t size)
 {
-    bool error = TRUE;
-    if (ptr == NULL)
-        io_error(IO_MSG_NULL_PTR);
-    else if (MEM_CURRENT_ALLOCATIONS == 0 || size > MEM_BLOCKS_ALLOCATED)
-        io_error(MEM_MSG_INVALID_MEMORY);
-    else error = FALSE;
-    if (error) return;
+    io_assert(ptr != NULL, IO_MSG_NULL_PTR);
+    io_assert(size > 0, MEM_MSG_INVALID_BLOCK_SIZE);
+    io_assert(MEM_BLOCKS_ALLOCATED >= size, MEM_MSG_INVALID_MEMORY);
+    io_assert(MEM_CURRENT_ALLOCATIONS > 0, MEM_MSG_INVALID_MEMORY);
 
     free(ptr);
     MEM_CURRENT_ALLOCATIONS--;

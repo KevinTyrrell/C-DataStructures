@@ -1,131 +1,64 @@
 ## Data Structures in C
 =========================
 
-Static library implementations of popular data structures in Computer Science. These were developed for use in my own projects, as I wanted a way to abstract the C language a bit to make more complex projects easier to work with.
-Each data structure's implementation should closely match the correct algorithms for each operation. Complexities written in the documentation should be accurate. Each structure may need function pointers in order to work properly. It is up to the user of this library to provide those functions to the structures. The data types for each of the structures is of type `void*`, thus the strucutres need to know how to handle the types you provide it with.
+Robust and reliable implementations of common data structures. These were developed for use in my own projects, as I wanted a way to abstract the C language a bit to make more complex projects easier to work with. Each data structure's implementation should closely match their professionally-developed counterparts. Since each structure can be passed in any data type, **function pointers** are (sometimes) needed to be passed into the constructor for a given structure. Some functions are optional to define and can be passed as `NULL` (ex. *toString*, if you don't need to print elements) while others are mandatory (ex. HashTable's *hash* function). Below is a table illustrating the caveats of each structure.
 
 |Data Structure|Uses|Sorted?|Functions Required|Thread Safe|
 |-|:-:|:-:|-|:-:
-|Vector| Random Access, Deque, Stack, Queue|On Demand Ω(n * log(n))|**compare** (optional, used for *sort*)<br>**toString** (optional, used for *print*)|No
-|LinkedList|Deque, Stack, Queue|On Demand Θ(n * log(n))|**compare** (optional, used for *sort*)<br>**toString** (optional, used for *print*)|No
+|Vector| Random Access, Deque, Stack, Queue|On Demand<br>Ω(n * log(n))|**compare** (optional, used for *sort*, *remove*, *contains*)<br>**toString** (optional, used for *print*)|Yes
+|LinkedList|Deque, Stack, Queue|On Demand<br>Θ(n * log(n))|**compare** (optional, used for *sort*)<br>**toString** (optional, used for *print*)|No
 |HashTable|Map, Set|No|**hash** (mandatory)<br>**equals** (mandatory)<br>**toString** (optional, used for *print*)|No
 
 
 
 ## Example Uses:
 
+<details> 
+  <summary>See Here for Card Implementation</summary>
+   https://gist.github.com/KevinTyrrell/ae214b03e8a2052438491bdb3ff476fd
+</details>
 
-#### Vector
-
+### Vector
 ```c
-#include "Vector.h"
-
-char* toString(const void* const v)
+int main()
 {
-	static char ar[1];
-	ar[0] = *(char*)v;
-	return ar;
-}
+    Vector* const deck = Vector_new(&compare, &toString);
 
-int compare(const void* const p1, const void* const p2)
-{
-	const char c1 = *(char*)p1, c2 = *(char*)p2;
-	if (c1 < c2) return -1;
-	if (c1 > c2) return 1;
-	return 0;
-}
+    // Not needed as the Vector grows automatically.
+    vect_grow_to(deck, 52);
+    // Add 52 cards to the Deck.
+    for (int s = HEARTS; s <= CLUBS; s++)
+        for (int f = ACE; f <= KING; f++)
+        {
+            Card *c = malloc(sizeof(Card));
+            c->f = f;
+            c->s = s;
+            vect_push_back(deck, c);
+        }
 
-int main(int argc, char* argv[])
-{
-	struct Vector *vect = Vector_new(&compare, &toString);
+    vect_shuffle(deck); // Shuffle and deck cards out to the players.
+    const int PLAYERS = 6, CARDS_PER_PLAYER = 7;
+    for (int i = 0; i < PLAYERS; i++)
+        for (int h = 0; h < CARDS_PER_PLAYER; h++)
+        {
+            Card *dealt = vect_front(deck);
+            vect_pop_front(deck);
+        }
 
-	const char letters[] = "ABCDEFGHIJK";
-	for (unsigned int i = 0, len = strlen(letters); i < len; i++)
-		if (i % 2 == 0)
-			vect_push_back(vect, &letters[i]);
-		else
-			vect_push_front(vect, &letters[i]);
-	
-	vect_print(vect); // Prints [J, H, F, D, B, A, C, E, G, I, K]
-	while (vect_size(vect) > 5)
-		vect_pop_back(vect);
-	vect_sort(vect);
-	vect_print(vect); // Prints [B, D, F, H, J]
+    printf("There are %d cards left in the deck.\n", vect_size(deck));  // 10 Cards Left
+    vect_print(deck);
+    vect_sort(deck);                                                    // Sort the cards.
+    vect_print(deck);
+    vect_erase(deck, 5);                                                // Delete the 6th card.
+    
+    // Locate a given card.
+    Card search_val = { HEARTS, FIVE };
+    bool success = vect_remove(deck, &search_val);
+    printf("%s%s%s\n", success ? "Removed" : "Couldn't locate", " the ", toString(&search_val));
+    search_val.f = ACE;
+    printf("The %s does %sexist in the deck.\n", toString(&search_val), vect_contains(deck, &search_val) ? "" : "not ");
 
-	/* Remember to free the Vector after use. */
-	vect_destroy(vect);
-    return 0;-
-}
-```
-
-#### HashTable
-
-
-```c
-#include "HashTable.h"
-
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-
-/* djb2 algorithm by Dan Bernstein. */
-unsigned int hash(const void *key)
-{
-	/* Our key in this case is a String. */
-	const char* str = (char*)key;
-	unsigned int hash = 5381;
-
-	for (int c; c = *str++;)
-		hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-
-	return hash;
-}
-
-/* Check if two Strings are equal. */
-bool equals(const void *k1, const void *k2)
-{
-	return strcmp(k1, k2) == 0;
-}
-
-/* Only used for printing out Key/Value pairs. */
-char* toString(const struct table_Entry *entry)
-{
-	static char ar[50];
-	sprintf(ar, "<%s,%.2f>", (char*)entry->key, *(float*)entry->value);
-	return ar;
-}
-
-int main(int argc, char* argv[])
-{
-	HashTable* const gradebook = HashTable_new(&hash, &equals, &toString);
-	
-	size_t size = 13;
-	const char* const students[] = {
-		"Jessie", "James", "Brock", "Misty", "Ash", "Gary", "Oak", "Giovanni",
-		"Jenny", "Tracey", "May", "Max", "Dawn"
-	};
-	const float const grades[] = {
-		3.25f, 1.98f, 3.90f, 2.0f, 1.12f, 1.8f, 2.0f, 3.33f,
-		4.0f, 3.0f, 0.5f, 2.9f, 2.1f
-	};
-
-	// HashTable grows automatically, table_grow call is not needed.
-	// If you do know how many elements you want to add, call grow to speed up complexity.
-	table_grow(gradebook, size);
-
-	// Place all Key/Value pairs into the map.
-	for (int i = 0; i < size; i++)
-		table_put(gradebook, students[i], &grades[i]);
-	
-	// Get the value associated with the key "Ash".
-	printf("The student %s has a GPA of %.2f.\n", "Ash",
-		*(float*)table_get(gradebook, "Ash"));
-
-	// Print all Key/Value entries.
-	table_print(gradebook);
-
- 	/* Remember to free the HashTable after use. */
-	table_destroy(gradebook);
-	return 0;
+    vect_destroy(deck);
+    return 0;
 }
 ```

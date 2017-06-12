@@ -1,41 +1,65 @@
-﻿
+
+/*
+ * File: Stopwatch.c
+ * Date: Mar 07, 2017
+ * Name: Kevin Tyrrell
+ * Version: 2.0.0
+ */
+
+/*
+Copyright © 2017 Kevin Tyrrell
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include "Stopwatch.h"
 
-#define SW_MSG_NOT_STARTED "The Stopwatch must have been started in order to perform this operation!"
-#define SW_MSG_ALREADY_RUNNING "Unable to perform this operation while the Stopwatch is running! "
-#define SW_MSG_ALREADY_ENDED "The Stopwatch has already been ended!"
+#define SW_TO_MILLIS(val) val * 1000
 
-#define TO_MILLISECONDS 1000
+#define SW_MSG_NOT_STARTED "The Stopwatch must have been started in order to perform this operation!"
+#define SW_MSG_ALREADY_RUNNING "Unable to perform this operation while the Stopwatch is running!"
+#define SW_MSG_ALREADY_ENDED "The Stopwatch has already been ended!"
 
 /* Stopwatch structure. */
 struct Stopwatch
 {
-	clock_t *start, *end;
+    clock_t *start, *end;
 };
 
 /* Constructor function. */
 Stopwatch* Stopwatch_new()
 {
-	Stopwatch* const sw = mem_calloc(1, sizeof(Stopwatch));
-	return sw;
+    return mem_calloc(1, sizeof(Stopwatch));
 }
 
 /*
- * Returns the amount of time clocked in milliseconds.
+ * Returns the amount of time clocked by the watch in milliseconds.
  * The watch must have been started and stopped before calling this function.
  * Θ(1)
  */
 clock_t sw_elapsed(const Stopwatch* const sw)
 {
-	bool error = TRUE;
-	if (sw->start == NULL)
-		io_error(SW_MSG_NOT_STARTED);
-	else if (sw->end == NULL)
-		io_error(SW_MSG_ALREADY_RUNNING);
-	else error = FALSE;
-	if (error) return -1;
-	
-	return TO_MILLISECONDS * (*sw->end - *sw->start) / CLOCKS_PER_SEC;
+    io_assert(sw != NULL, IO_MSG_NULL_PTR);
+    io_assert(sw->start != NULL, SW_MSG_NOT_STARTED);
+    io_assert(sw->end != NULL, SW_MSG_ALREADY_RUNNING);
+
+    return SW_TO_MILLIS(*sw->end - *sw->start) / CLOCKS_PER_SEC;
 }
 
 /*
@@ -47,7 +71,7 @@ clock_t sw_elapsed(const Stopwatch* const sw)
  */
 clock_t sw_difference(const Stopwatch* const sw1, const Stopwatch* const sw2)
 {
-	return sw_elapsed(sw1) - sw_elapsed(sw2);
+    return sw_elapsed(sw1) - sw_elapsed(sw2);
 }
 
 /*
@@ -57,34 +81,30 @@ clock_t sw_difference(const Stopwatch* const sw1, const Stopwatch* const sw2)
  */
 void sw_start(struct Stopwatch * const sw)
 {
-	if (sw->start != NULL)
-	{
-		io_error(SW_MSG_ALREADY_RUNNING);
-		return;
-	}
-	sw->start = mem_malloc(sizeof(clock_t));
-	*sw->start = clock();
+    io_assert(sw != NULL, IO_MSG_NULL_PTR);
+    io_assert(sw->start == NULL, SW_MSG_ALREADY_RUNNING);
+
+    const clock_t time = clock();
+    sw->start = mem_malloc(sizeof(clock_t));
+    *sw->start = time;
 }
 
 /*
  * Ends the stopwatch and returns the elapsed time in milliseconds.
  * The watch should be started before calling this function.
- * For the return value, see: Elapsed.
+ * See: sw_elapsed
  * Θ(1)
  */
-clock_t sw_stop(struct Stopwatch * const sw)
+clock_t sw_stop(struct Stopwatch* const sw)
 {
-	bool error = TRUE;
-	if (sw->start == NULL)
-		io_error(SW_MSG_NOT_STARTED);
-	else if (sw->end != NULL)
-		io_error(SW_MSG_ALREADY_ENDED);
-	else error = FALSE;
-	if (error) return -1;
+    io_assert(sw != NULL, IO_MSG_NULL_PTR);
+    io_assert(sw->start != NULL, SW_MSG_NOT_STARTED);
+    io_assert(sw->end != NULL, SW_MSG_ALREADY_ENDED);
 
-	sw->end = mem_malloc(sizeof(clock_t));
-	*sw->end = clock();
-	return sw_elapsed(sw);
+    const clock_t time = clock();
+    sw->end = mem_malloc(sizeof(clock_t));
+    *sw->end = time;
+    return sw_elapsed(sw);
 }
 
 /*
@@ -93,27 +113,29 @@ clock_t sw_stop(struct Stopwatch * const sw)
  */
 void sw_reset(Stopwatch* const sw)
 {
-	if (sw->start == NULL)
-	{
-		io_error(SW_MSG_NOT_STARTED);
-		return;
-	}
-	mem_free(sw->start, sizeof(clock_t));
-	sw->start = NULL;
-	
-	if (sw->end != NULL)
-	{
-		mem_free(sw->end, sizeof(clock_t));
-		sw->end = NULL;
-	}
+    io_assert(sw != NULL, IO_MSG_NULL_PTR);
+    /* No sense in resetting the watch if it hasn't been used. */
+    io_assert(sw->start != NULL, SW_MSG_NOT_STARTED);
+
+    mem_free(sw->start, sizeof(clock_t));
+    sw->start = NULL;
+
+    /* The user is allow to reset the watch before stopping it. */
+    if (sw->end != NULL)
+    {
+        mem_free(sw->end, sizeof(clock_t));
+        sw->end = NULL;
+    }
 }
 
 /* De-constructor function. */
 void sw_destroy(Stopwatch* const sw)
 {
-	if (sw->start != NULL)
-		mem_free(sw->start, sizeof(clock_t));
-	if (sw->end != NULL)
-		mem_free(sw->end, sizeof(clock_t));
-	mem_free(sw, sizeof(Stopwatch));
+    io_assert(sw != NULL, IO_MSG_NULL_PTR);
+
+    if (sw->start != NULL)
+        mem_free(sw->start, sizeof(clock_t));
+    if (sw->end != NULL)
+        mem_free(sw->end, sizeof(clock_t));
+    mem_free(sw, sizeof(Stopwatch));
 }

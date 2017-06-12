@@ -1,4 +1,33 @@
 
+/*
+ * File: Synchronize.c
+ * Date: Jun 01, 2017
+ * Name: Kevin Tyrrell
+ * Version: 2.0.0
+ */
+
+/*
+Copyright © 2017 Kevin Tyrrell
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include "Synchronize.h"
 
 #define SYNC_MSG_MUTEX_FAIL "Mutex creation failed: "
@@ -15,7 +44,7 @@ const bool SYNC_DEBUG_MODE = false;
 struct ReadWriteSync
 {
     /* Synchronization variables. */
-    HANDLE mutex_busy, mutex_auxiliary;
+    HANDLE mutex_primary, mutex_auxiliary;
     /* How many readers are reading this structure. */
     unsigned int readers;
 };
@@ -26,15 +55,15 @@ ReadWriteSync* ReadWriteSync_new()
     ReadWriteSync* const rw_sync = mem_calloc(1, sizeof(ReadWriteSync));
 
     /* Default security, initially not owned, unnamed. */
-    rw_sync->mutex_busy = CreateMutex(NULL, FALSE, NULL);
+    rw_sync->mutex_primary = CreateMutex(NULL, FALSE, NULL);
+    if (rw_sync->mutex_primary == NULL)
+        fprintf(stderr, "%s%lu", SYNC_MSG_MUTEX_FAIL, GetLastError());
     rw_sync->mutex_auxiliary = CreateMutex(NULL, FALSE, NULL);
-    /* Ensure the mutex creation was successful. */
-    if (rw_sync->mutex_busy == NULL || rw_sync->mutex_auxiliary == NULL)
-    {
-        char buffer[1024];
-        sprintf(buffer, "%s%d", SYNC_MSG_MUTEX_FAIL, GetLastError());
-        io_error(buffer);
-    }
+    if (rw_sync->mutex_auxiliary == NULL)
+        fprintf(stderr, "%s%lu", SYNC_MSG_MUTEX_FAIL, GetLastError());
+
+    io_assert(rw_sync->mutex_primary != NULL, IO_MSG_NULL_PTR);
+    io_assert(rw_sync->mutex_auxiliary != NULL, IO_MSG_NULL_PTR);
 
     return rw_sync;
 }
@@ -46,6 +75,8 @@ ReadWriteSync* ReadWriteSync_new()
  */
 void sync_read_start(ReadWriteSync* const rw_sync)
 {
+    io_assert(rw_sync != NULL, IO_MSG_NULL_PTR);
+
     if (SYNC_DEBUG_MODE) printf("Thread %lu is waiting for aux mutex.\n", GetCurrentThreadId());
     /* Grab mutex so we can increment readers. */
     WaitForSingleObject(rw_sync->mutex_auxiliary, INFINITE);
@@ -54,7 +85,7 @@ void sync_read_start(ReadWriteSync* const rw_sync)
     if (++rw_sync->readers == 1)
     {
         if (SYNC_DEBUG_MODE) printf("Thread %lu is waiting for main mutex.\n", GetCurrentThreadId());
-        WaitForSingleObject(rw_sync->mutex_busy, INFINITE);
+        WaitForSingleObject(rw_sync->mutex_primary, INFINITE);
         if (SYNC_DEBUG_MODE) printf("Thread %lu has obtained the main mutex.\n", GetCurrentThreadId());
     }
     /* Release the mutex now that we have modified readers. */
@@ -69,6 +100,8 @@ void sync_read_start(ReadWriteSync* const rw_sync)
  */
 void sync_read_end(ReadWriteSync* const rw_sync)
 {
+    io_assert(rw_sync != NULL, IO_MSG_NULL_PTR);
+
     if (SYNC_DEBUG_MODE) printf("Thread %lu is waiting for aux mutex.\n", GetCurrentThreadId());
     /* Grab mutex so we can decrement readers. */
     WaitForSingleObject(rw_sync->mutex_auxiliary, INFINITE);
@@ -78,7 +111,7 @@ void sync_read_end(ReadWriteSync* const rw_sync)
     /* If we are the last reader, allow others to write. */
     if (--rw_sync->readers == 0)
     {
-        ReleaseMutex(rw_sync->mutex_busy);
+        ReleaseMutex(rw_sync->mutex_primary);
         if (SYNC_DEBUG_MODE) printf("Thread %lu has released main mutex.\n", GetCurrentThreadId());
     }
     /* Release the mutex now that we have modified readers. */
@@ -93,8 +126,10 @@ void sync_read_end(ReadWriteSync* const rw_sync)
  */
 void sync_write_start(ReadWriteSync* const rw_sync)
 {
+    io_assert(rw_sync != NULL, IO_MSG_NULL_PTR);
+
     if (SYNC_DEBUG_MODE) printf("Thread %lu is waiting for main mutex.\n", GetCurrentThreadId());
-    WaitForSingleObject(rw_sync->mutex_busy, INFINITE);
+    WaitForSingleObject(rw_sync->mutex_primary, INFINITE);
     if (SYNC_DEBUG_MODE) printf("Thread %lu has obtained the main mutex.\n", GetCurrentThreadId());
 }
 
@@ -105,7 +140,9 @@ void sync_write_start(ReadWriteSync* const rw_sync)
  */
 void sync_write_end(ReadWriteSync* const rw_sync)
 {
-    ReleaseMutex(rw_sync->mutex_busy);
+    io_assert(rw_sync != NULL, IO_MSG_NULL_PTR);
+
+    ReleaseMutex(rw_sync->mutex_primary);
     if (SYNC_DEBUG_MODE) printf("Thread %lu has released main mutex.\n", GetCurrentThreadId());
 }
 
@@ -115,7 +152,9 @@ void sync_write_end(ReadWriteSync* const rw_sync)
  */
 void sync_destroy(ReadWriteSync *rw_sync)
 {
-    CloseHandle(rw_sync->mutex_busy);
+    io_assert(rw_sync != NULL, IO_MSG_NULL_PTR);
+
+    CloseHandle(rw_sync->mutex_primary);
     CloseHandle(rw_sync->mutex_auxiliary);
     mem_free(rw_sync, sizeof(ReadWriteSync));
 }
