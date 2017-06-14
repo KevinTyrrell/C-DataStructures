@@ -69,7 +69,7 @@ static void vect_pswap(const void **const v1, const void **const v2);
 static void vect_merge_sort(const Vector* const vect, const unsigned int start, const size_t size);
 static void vect_quick_sort(const Vector* const vect, const unsigned int index, const size_t size);
 static void vect_shift(Vector* const vect, const unsigned int start, const unsigned int stop, const bool leftwards);
-static unsigned int vect_index(const Vector* const vect, const unsigned int index);
+static unsigned int vect_backend_index(const Vector *const vect, const unsigned int index);
 
 /*
  * Constructor function.
@@ -87,7 +87,7 @@ Vector* Vector_new(int(*compare)(const void*, const void*), char*(*toString)(con
 }
 
 /*
- * Returns the element at the given index.
+ * Returns the element at the specified index.
  * Θ(1)
  */
 void* vect_at(const Vector* const vect, const unsigned int index)
@@ -97,11 +97,10 @@ void* vect_at(const Vector* const vect, const unsigned int index)
     /* Lock the data structure to future writers. */
     sync_read_start(vect->rw_sync);
 
-    io_assert(vect->size > 0, IO_MSG_EMPTY);
     io_assert(index < vect->size, IO_MSG_OUT_OF_BOUNDS);
 
     /* Wrap around the table if the index exceeds the capacity. */
-    const void* const val = vect->table[vect_index(vect, index)];
+    const void* const val = vect->table[vect_backend_index(vect, index)];
 
     /* Unlock the data structure. */
     sync_read_end(vect->rw_sync);
@@ -121,7 +120,6 @@ void* vect_front(const Vector* const vect)
     sync_read_start(vect->rw_sync);
 
     io_assert(vect->size > 0, IO_MSG_EMPTY);
-
     const void* const val = vect->table[vect->start];
 
     /* Unlock the data structure. */
@@ -189,7 +187,47 @@ bool vect_empty(const Vector* const vect)
 }
 
 /*
- * Returns true if the Vector contains the provided element.
+ * Returns the index in the Vector of the first occurrence of the specified element.
+ * Returns false if no such element is found in the Vector.
+ * The index parameter should be non-NULL and point to valid memory space.
+ * The `compare` function must be defined to call this function.
+ * Θ(n)
+ */
+bool vect_index(const Vector* const vect, const void* const data, unsigned int* const index)
+{
+    io_assert(vect != NULL, IO_MSG_NULL_PTR);
+    io_assert(data != NULL, IO_MSG_NULL_PTR);
+    io_assert(index != NULL, IO_MSG_NULL_PTR);
+    io_assert(vect->compare != NULL, IO_MSG_NOT_SUPPORTED);
+
+    bool found = false;
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(vect->rw_sync);
+
+    vect_Iterator* const iter = vect_iter(vect, 0);
+    while (vect_iter_has_next(iter))
+    {
+        const void* const iterated = vect_iter_next(iter);
+        if (iterated == data || vect->compare(iterated, data) == 0)
+        {
+            found = true;
+            // TODO: Ensure that iter->index is always correct.
+            *index = iter->index;
+            break;
+        }
+    }
+
+    /* Unlock the data structure. */
+    sync_read_end(vect->rw_sync);
+
+    vect_iter_destroy(iter);
+
+    return found;
+}
+
+/*
+ * Returns true if the Vector contains the specified element.
  * The `compare` function must be defined to call this function.
  * Θ(n)
  */
@@ -199,24 +237,16 @@ bool vect_contains(const Vector* const vect, const void* const data)
     io_assert(data != NULL, IO_MSG_NULL_PTR);
     io_assert(vect->compare != NULL, IO_MSG_NOT_SUPPORTED);
 
-    bool success = false;
-    vect_Iterator* const iter = vect_iter(vect, 0);
-
     /* Lock the data structure to future writers. */
     sync_read_start(vect->rw_sync);
 
-    while (vect_iter_has_next(iter))
-        if (vect->compare(vect_iter_next(iter), data) == 0)
-        {
-            success = true;
-            break;
-        }
+    unsigned int temp;
+    const bool located = vect_index(vect, data, &temp);
 
     /* Unlock the data structure. */
     sync_read_end(vect->rw_sync);
 
-    vect_iter_destroy(iter);
-    return success;
+    return located;
 }
 
 /*
@@ -229,17 +259,18 @@ void** vect_array(const Vector* const vect)
     io_assert(vect != NULL, IO_MSG_NULL_PTR);
 
     void** const arr = calloc(vect->size, sizeof(void*));
-    vect_Iterator* const iter = vect_iter(vect, 0);
 
     /* Lock the data structure to future writers. */
     sync_read_start(vect->rw_sync);
 
-    for (unsigned int i = 0; vect_iter_has_next(iter);)
+    vect_Iterator* const iter = vect_iter(vect, 0);
+    for (unsigned int i = 0; vect_iter_has_next(iter); i++)
         arr[i] = vect_iter_next(iter);
 
     /* Unlock the data structure. */
     sync_read_end(vect->rw_sync);
 
+    vect_iter_destroy(iter);
     return arr;
 }
 
@@ -253,18 +284,17 @@ void vect_print(const Vector* const vect)
     io_assert(vect != NULL, IO_MSG_NULL_PTR);
     io_assert(vect->toString != NULL, IO_MSG_NOT_SUPPORTED);
 
-    vect_Iterator* const iter = vect_iter(vect, 0);
-
     /* Lock the data structure to future writers. */
     sync_read_start(vect->rw_sync);
 
-    printf("%s", "[ ");
+    vect_Iterator* const iter = vect_iter(vect, 0);
+    printf("%c", '[');
     while (vect_iter_has_next(iter))
     {
         char* value = vect->toString(vect_iter_next(iter));
         printf("%s%s", value, vect_iter_has_next(iter) ? ", " : "");
     }
-    printf(" ]\n");
+    printf("]\n");
 
     /* Unlock the data structure. */
     sync_read_end(vect->rw_sync);
@@ -290,7 +320,7 @@ Vector* vect_clone(const Vector* const vect)
 }
 
 /*
- * Replaces an element in the Vector at a given index.
+ * Replaces an element in the Vector at a specified index.
  * Θ(1)
  */
 void vect_assign(const Vector* const vect, const unsigned int index, const void* const data)
@@ -301,17 +331,16 @@ void vect_assign(const Vector* const vect, const unsigned int index, const void*
     /* Lock the data structure to future readers/writers. */
     sync_write_start(vect->rw_sync);
 
-    io_assert(vect->size > 0, IO_MSG_EMPTY);
     io_assert(index < vect->size, IO_MSG_OUT_OF_BOUNDS);
 
-    vect->table[vect_index(vect, index)] = data;
+    vect->table[vect_backend_index(vect, index)] = data;
 
     /* Unlock the data structure. */
     sync_write_end(vect->rw_sync);
 }
 
 /*
- * Inserts an element at the provided index.
+ * Inserts an element at the specified index in the Vector.
  * Ω(1), O(n)
  */
 void vect_insert(Vector* const vect, const unsigned int index, const void* const data)
@@ -337,12 +366,12 @@ void vect_insert(Vector* const vect, const unsigned int index, const void* const
         if (vect->size - 1 - index <= index)
         {
             vect->end = INDEX_RIGHT(vect->end, vect->capacity);
-            vect_shift(vect, vect_index(vect, index), vect->end, false);
+            vect_shift(vect, vect_backend_index(vect, index), vect->end, false);
         }
         else
         {
             vect->start = INDEX_LEFT(vect->start, vect->capacity);
-            vect_shift(vect, vect_index(vect, index), vect->start, true);
+            vect_shift(vect, vect_backend_index(vect, index), vect->start, true);
         }
 
         vect->size++;
@@ -364,30 +393,22 @@ bool vect_remove(Vector* const vect, const void* const data)
     io_assert(data != NULL, IO_MSG_NULL_PTR);
     io_assert(vect->compare != NULL, IO_MSG_NOT_SUPPORTED);
 
-    bool success = false;
-    vect_Iterator* const iter = vect_iter(vect, 0);
-
     /* Lock the data structure to future readers/writers. */
     sync_write_start(vect->rw_sync);
 
-    for (unsigned int i = 0; vect_iter_has_next(iter); i++)
-        /* Search for a data element that matches the parameter. */
-        if (vect->compare(vect_iter_next(iter), data) == 0)
-        {
-            vect_erase(vect, i);
-            success = true;
-            break;
-        }
+    unsigned int index;
+    bool success;
+    if ((success = vect_index(vect, data, &index)))
+        vect_erase(vect, index);
 
     /* Unlock the data structure. */
     sync_write_end(vect->rw_sync);
-    vect_iter_destroy(iter);
 
     return success;
 }
 
 /*
- * Removes an element from the Vector at a given index.
+ * Removes an element from the Vector at a specified index.
  * Ω(1), O(n)
  */
 void vect_erase(Vector* const vect, const unsigned int index)
@@ -408,12 +429,12 @@ void vect_erase(Vector* const vect, const unsigned int index)
         /* Check if shifting left is quicker. */
         if (vect->size - 1 - index <= index)
         {
-            vect_shift(vect, vect->end, vect_index(vect, index), true);
+            vect_shift(vect, vect->end, vect_backend_index(vect, index), true);
             vect->end = INDEX_LEFT(vect->end, vect->capacity);
         }
         else
         {
-            vect_shift(vect, vect->start, vect_index(vect, index), false);
+            vect_shift(vect, vect->start, vect_backend_index(vect, index), false);
             vect->start = INDEX_RIGHT(vect->start, vect->capacity);
         }
 
@@ -425,7 +446,7 @@ void vect_erase(Vector* const vect, const unsigned int index)
 }
 
 /*
- * Inserts an element at the end of the Vector.
+ * Appends an element at the end of the Vector.
  * Ω(1), O(n)
  */
 void vect_push_back(Vector * const vect, const void* const data)
@@ -523,7 +544,7 @@ void vect_pop_front(Vector* const vect)
 }
 
 /*
- * Append data from another Vector to the end of this Vector.
+ * Appends all data from another Vector to the end of this Vector.
  * Θ(n)
  */
 void vect_append(Vector* const vect, const Vector* const other)
@@ -602,9 +623,7 @@ void vect_clear(Vector* const vect)
     /* Lock the data structure to future readers/writers. */
     sync_write_start(vect->rw_sync);
 
-    vect->start = 0;
-    vect->end = 0;
-    vect->size = 0;
+    vect->start = vect->end = vect->size = 0;
 
     /* Unlock the data structure. */
     sync_write_end(vect->rw_sync);
@@ -612,7 +631,7 @@ void vect_clear(Vector* const vect)
 
 /*
  * Sorts elements inside the Vector in ascending order.
- * Uses the `compare` function provided to the Vector.
+ * Uses the `compare` function specified to the Vector.
  * See: `vect_quick_sort`
  */
 void vect_sort(const Vector* const vect)
@@ -629,7 +648,7 @@ void vect_sort(const Vector* const vect)
 }
 
 /*
- * Shuffles the elements inside the Vector randomly.
+ * Shuffles the elements inside the Vector pseudo-randomly.
  * Utilizes the Fisher-Yates Shuffling Algorithm:
  * (https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle)
  * Θ(n)
@@ -671,12 +690,12 @@ void vect_destroy(const Vector* const vect)
 vect_Iterator* vect_iter(const Vector* const vect, const unsigned int index)
 {
     io_assert(vect != NULL, IO_MSG_NULL_PTR);
-    io_assert(index == 0 || index >= vect->size, IO_MSG_OUT_OF_BOUNDS);
+    io_assert(index < vect->size, IO_MSG_OUT_OF_BOUNDS);
 
     vect_Iterator* const iter = mem_calloc(1, sizeof(vect_Iterator));
 
     iter->ref = vect;
-    iter->index = vect_index(vect, index);
+    iter->index = vect_backend_index(vect, index);
 
     if (index == 0)
         iter->bearing = &((Vector*)vect)->start;
@@ -807,7 +826,7 @@ void vect_pswap(const void **const v1, const void **const v2)
  * Converts regular indexes from 0->(capacity - 1) into indexes that wrap around the Vector.
  * Θ(1)
  */
-unsigned int vect_index(const Vector* const vect, const unsigned int index)
+unsigned int vect_backend_index(const Vector *const vect, const unsigned int index)
 {
     return (vect->start + index) % vect->capacity;
 }

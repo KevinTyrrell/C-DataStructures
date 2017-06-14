@@ -6,7 +6,7 @@ Robust and reliable implementations of common data structures. These were develo
 |Data Structure|Uses|Sorted?|Functions Required|Thread Safe|
 |-|:-:|:-:|-|:-:
 |Vector| Random Access, Deque, Stack, Queue|On Demand<br>Ω(n * log(n))|**compare** (optional, used for *sort*, *remove*, *contains*)<br>**toString** (optional, used for *print*)|Yes
-|LinkedList|Deque, Stack, Queue|On Demand<br>Θ(n * log(n))|**compare** (optional, used for *sort*)<br>**toString** (optional, used for *print*)|No
+|LinkedList|Deque, Stack, Queue|On Demand<br>Θ(n * log(n))|**compare** (optional, used for *sort*)<br>**toString** (optional, used for *print*)|Yes
 |HashTable|Map, Set|No|**hash** (mandatory)<br>**equals** (mandatory)<br>**toString** (optional, used for *print*)|No
 
 
@@ -15,7 +15,45 @@ Robust and reliable implementations of common data structures. These were develo
 
 <details> 
   <summary>See Here for Card Implementation</summary>
-   https://gist.github.com/KevinTyrrell/ae214b03e8a2052438491bdb3ff476fd
+	<pre><code>
+   	// Poker Cards.
+	enum suit { HEARTS, SPADES, DIAMONDS, CLUBS };
+	enum face { ACE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING };
+	static inline char* suit_str(enum suit s)
+	{
+		static char* strs[] = { "Hearts", "Spades", "Diamonds", "Clubs" };
+		return strs[s];
+	}
+	static inline char* face_str(enum face f)
+	{
+		static char* strs[] = { "Ace", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King" };
+		return strs[f];
+	}
+	typedef struct
+	{
+		enum suit s;
+		enum face f;
+	} Card;
+
+	// Compares two card structs.
+	int compare(const void *v1, const void *v2)
+	{
+		Card *one = (Card*)v1, *two = (Card*)v2;
+		if (one->s != two->s)
+			return one->s < two->s ? -1 : 1;
+		if (one->f != two->f)
+			return one->f < two->f ? -1 : 1;
+		return 0;
+	}
+
+	char* toString(const void* val)
+	{
+		Card *c = (Card*)val;
+		static char buffer[25];
+		sprintf(buffer, "%s%s%s", face_str(c->f), " of ", suit_str(c->s));
+		return buffer;
+	}
+	</code></pre>
 </details>
 
 ### Vector
@@ -59,6 +97,46 @@ int main()
     printf("The %s does %sexist in the deck.\n", toString(&search_val), vect_contains(deck, &search_val) ? "" : "not ");
 
     vect_destroy(deck);
+    return 0;
+}
+```
+
+### LinkedList
+```c
+int main()
+{
+    LinkedList *list = LinkedList_new(&compare, &toString);
+
+    // Add Cards to the List.
+    for (int i = HEARTS; i <= CLUBS; i++)
+        for (int h = ACE; h <= KING; h++)
+        {
+            Card *c = malloc(sizeof(Card));
+            c->s = i;
+            c->f = h;
+            list_push_back(list, c);
+        }
+
+    // Shuffle the Deck of cards.
+    list_shuffle(list);
+    list_print(list);
+
+    // Iterate over the list, starting at index 0.
+    list_Iterator *iter = list_iter(list, 0);
+    while (list_iter_has_next(iter))
+    {
+        Card* c = list_iter_next(iter);
+        // Remove any card that isn't an Ace, Jack, Queen, or King.
+        if (c->f >= TWO && c->f <= TEN)
+            list_iter_remove(iter);
+    }
+    list_iter_destroy(iter);
+
+    list_sort(list);
+    printf("There are %u amount of cards in the list.\n", list_size(list));
+    list_print(list);
+    
+    list_destroy(list);
     return 0;
 }
 ```
