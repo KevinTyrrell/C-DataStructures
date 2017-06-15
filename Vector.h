@@ -61,7 +61,7 @@ void* vect_at(const Vector* const vect, const unsigned int index);
 void* vect_front(const Vector* const vect);
 /* Returns the element at the back of the Vector. */
 void* vect_back(const Vector* const vect);
-/* Returns the size of the Vector. */
+/* Returns the number of elements in the Vector. */
 size_t vect_size(const Vector* const vect);
 /* Returns true if the Vector is empty. */
 bool vect_empty(const Vector* const vect);
@@ -69,8 +69,6 @@ bool vect_empty(const Vector* const vect);
 bool vect_index(const Vector* const vect, const void* const data, unsigned int* const index);
 /* Returns true if the Vector contains the specified element. */
 bool vect_contains(const Vector* const vect, const void* const data);
-/* Returns an array of all elements inside the Vector. */
-void** vect_array(const Vector* const vect);
 /* Prints out the contents of the Vector to the console window. */
 void vect_print(const Vector* const vect);
 /* Returns a shallow copy of the Vector. */
@@ -107,7 +105,7 @@ void vect_shuffle(const Vector* const vect);
 
 /* ~~~~~ De-constructors ~~~~~ */
 
-void vect_destroy(const Vector* const vect);
+void vect_destroy(Vector* const vect);
 
 /* ~~~~~ Iterator ~~~~~ */
 

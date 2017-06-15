@@ -34,13 +34,6 @@ SOFTWARE.
 #include "tools/Synchronize.h"
 #include "C-Random/Random.h"
 
-/*
-* LinkedList data structure.
-* LinkedList manages elements with pointers and references.
-* Elements are added dynamically without wasted memory.
-* Constructor: LinkedList_new, De-constructor: list_destroy.
-*/
-
 /* Anonymous structures. */
 typedef struct LinkedList LinkedList;
 typedef struct list_Iterator list_Iterator;
@@ -65,7 +58,7 @@ void* list_at(const LinkedList* const list, const unsigned int index);
 void* list_front(const LinkedList* const list);
 /* Returns the element at the back of the List. */
 void* list_back(const LinkedList* const list);
-/* Returns the size of the List. */
+/* Returns the number of elements in the List. */
 size_t list_size(const LinkedList* const list);
 /* Returns true if the List is empty. */
 bool list_empty(const LinkedList* const list);
@@ -73,8 +66,6 @@ bool list_empty(const LinkedList* const list);
 bool list_index(const LinkedList* const list, const void* const data, unsigned int* const index);
 /* Returns true if the List contains the specified element. */
 bool list_contains(const LinkedList* const list, const void* const data);
-/* Returns an array of all elements inside the List. */
-void** list_array(const LinkedList* const list);
 /* Prints out the contents of the List to the console window. */
 void list_print(const LinkedList* const list);
 /* Returns a shallow copy of the List. */

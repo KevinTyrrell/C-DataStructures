@@ -30,6 +30,7 @@ SOFTWARE.
 
 #include "Vector.h"
 
+/* Array capacity components. */
 #define DEFAULT_INITIAL_CAPACITY 10
 #define VECTOR_GROW_AMOUNT 2
 
@@ -61,7 +62,7 @@ struct vect_Iterator
     const Vector *ref;
 };
 
-/* Convenience functions. */
+/* Local functions. */
 static bool vect_full(const Vector* const vect);
 static void vect_grow(Vector* const vect);
 static void vect_swap(const Vector* const vect, const unsigned int i, const unsigned int h);
@@ -149,7 +150,7 @@ void* vect_back(const Vector* const vect)
 }
 
 /*
- * Returns the size of the Vector.
+ * Returns the number of elements in the Vector.
  * Θ(1)
  */
 size_t vect_size(const Vector* const vect)
@@ -247,31 +248,6 @@ bool vect_contains(const Vector* const vect, const void* const data)
     sync_read_end(vect->rw_sync);
 
     return located;
-}
-
-/*
- * Returns an array of all elements inside the Vector.
- * Remember to call `free` on the dynamically allocated array.
- * Θ(n)
- */
-void** vect_array(const Vector* const vect)
-{
-    io_assert(vect != NULL, IO_MSG_NULL_PTR);
-
-    void** const arr = calloc(vect->size, sizeof(void*));
-
-    /* Lock the data structure to future writers. */
-    sync_read_start(vect->rw_sync);
-
-    vect_Iterator* const iter = vect_iter(vect, 0);
-    for (unsigned int i = 0; vect_iter_has_next(iter); i++)
-        arr[i] = vect_iter_next(iter);
-
-    /* Unlock the data structure. */
-    sync_read_end(vect->rw_sync);
-
-    vect_iter_destroy(iter);
-    return arr;
 }
 
 /*
@@ -674,13 +650,13 @@ void vect_shuffle(const Vector* const vect)
  * De-constructor function.
  * Θ(1)
  */
-void vect_destroy(const Vector* const vect)
+void vect_destroy(Vector* const vect)
 {
     io_assert(vect != NULL, IO_MSG_NULL_PTR);
 
     mem_free(vect->table, vect->capacity * sizeof(void*));
     sync_destroy(vect->rw_sync);
-    mem_free((void*)vect, sizeof(Vector));
+    mem_free(vect, sizeof(Vector));
 }
 
 /*

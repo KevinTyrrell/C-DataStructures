@@ -161,7 +161,7 @@ void* list_back(const LinkedList* const list)
 }
 
 /*
- * Returns the size of the List.
+ * Returns the number of elements in the List.
  * Θ(1)
  */
 size_t list_size(const LinkedList* const list)
@@ -245,31 +245,6 @@ bool list_contains(const LinkedList* const list, const void* const data)
     sync_read_end(list->rw_sync);
 
     return success;
-}
-
-/*
- * Returns an array of all elements inside the List.
- * Remember to call `free` on the dynamically allocated array.
- * Θ(n)
- */
-void** list_array(const LinkedList* const list)
-{
-    io_assert(list != NULL, IO_MSG_NULL_PTR);
-
-    void **arr = calloc(list->size, sizeof(void*));
-
-    /* Lock the data structure to future writers. */
-    sync_read_start(list->rw_sync);
-
-    list_Iterator* const iter = list_iter((LinkedList*)list, 0);
-    for (unsigned int i = 0; list_iter_has_next(iter); i++)
-        arr[i] = list_iter_next(iter);
-
-    /* Unlock the data structure. */
-    sync_read_end(list->rw_sync);
-
-    list_iter_destroy(iter);
-    return arr;
 }
 
 /*
