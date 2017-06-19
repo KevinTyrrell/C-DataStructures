@@ -34,15 +34,13 @@ SOFTWARE.
 
 #include <stdlib.h>
 
-#define MEM_MSG_BLOCKS_UNAVAILABLE "Not enough memory to allocate for this variable!"
-
 /* ~~~~~ Memory Management ~~~~~ */
 
 /* Memory allocation function. */
 void* mem_malloc(const size_t size);
 /* Memory allocation function.*/
 void* mem_calloc(const size_t items, const size_t size);
-/* Memory allocation function. */
+/* Memory reallocation function. */
 void* mem_realloc(void *const ptr, const size_t oldSize, const size_t newSize);
 /* Memory de-allocation function. */
 void mem_free(void *const ptr, const size_t size);

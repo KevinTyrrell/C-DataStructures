@@ -3,7 +3,7 @@
  * File: Synchronize.h
  * Date: Jun 01, 2017
  * Name: Kevin Tyrrell
- * Version: 2.0.0
+ * Version: 3.0.0
  */
 
 /*
@@ -32,12 +32,17 @@ SOFTWARE.
 
 #include "Memory.h"
 
+#include <windows.h>
+#include <stdbool.h>
+#include <string.h>
+
 /* Anonymous structure. */
 typedef struct ReadWriteSync ReadWriteSync;
 
 /* ~~~~~ Constructors ~~~~~ */
 
 ReadWriteSync* ReadWriteSync_new();
+void mutex_signal(HANDLE mutex);
 
 /* ~~~~~ Mutators ~~~~~ */
 
@@ -52,4 +57,4 @@ void sync_write_end(ReadWriteSync* const rw_sync);
 
 /* ~~~~~ De-constructors ~~~~~ */
 
-void sync_destroy(ReadWriteSync *rw_sync);
+void sync_destroy(ReadWriteSync* const rw_sync);

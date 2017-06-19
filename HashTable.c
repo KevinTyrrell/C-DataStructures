@@ -61,9 +61,8 @@ struct HashTable
 /* Bucket structure. */
 typedef struct table_Bucket
 {
+    const void *key, *value;
     struct table_Bucket *next;
-    const void *key;
-    const void *value;
     unsigned int hash;
 } table_Bucket;
 
@@ -105,8 +104,6 @@ HashTable* HashTable_new(unsigned int(*hash)(const void*),
     /* Note: Capacity must always be a power of 2. */
     table->buckets = mem_calloc(DEFAULT_INITIAL_CAPACITY, sizeof(table_Bucket*));
     table->capacity = DEFAULT_INITIAL_CAPACITY;
-
-    /* Function pointers. */
     table->hash = hash;
     table->equals = equals;
     table->toString = toString;

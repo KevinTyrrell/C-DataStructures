@@ -3,7 +3,7 @@
  * File: IO.c
  * Date: Jun 01, 2017
  * Name: Kevin Tyrrell
- * Version: 1.0.0
+ * Version: 2.0.0
  */
 
 /*
@@ -30,64 +30,28 @@ SOFTWARE.
 
 #include "IO.h"
 
-#define Y_LC_KEY_CODE 121
-#define Y_UC_KEY_CODE 89
-#define N_LC_KEY_CODE 110
-#define N_UC_KEY_CODE 78
-
-#define IO_EXIT "Exit Runtime"
+#define IO_TIMESTAMP_FORMAT "%s%d/%s%d/%d %s%d:%s%d:%s%d"
+#define IO_CONVERT_YEAR(year) (year + 1900)
+#define IO_LEADING_ZERO(value) (value < 10 ? "0" : "")
 
 /*
- * Displays an error message to the user.
- * The user will also be prompted to terminate runtime or continue.
- * See: io_prompt
- */
-void io_error(const char* const message)
-{
-    const WORD stdColor = io_color(IO_LIGHT_RED);
-    fprintf(stderr, "\n\n%s\n\n", message);
-    /* Revert back to the previous color. */
-    io_color(stdColor);
-    if (io_prompt(IO_EXIT))
-        exit(EXIT_FAILURE);
-}
-
-/*
- * Returns true if the user selects yes to the displayed prompt.
- * The program's runtime will halt and wait for a Y/N key-press.
- * A provided message will be displayed along with the prompt.
+ * Returns the current system timestamp in String form.
+ * Return value is replaced if multiple timestamp calls are made.
+ * Used for testing purposes.
  * Θ(1)
  */
-bool io_prompt(const char *const message)
+char* io_timestamp()
 {
-    printf("%s (Y/N)?\n", message);
+    /* Get the system time, parse it into month/day/year. */
+    const time_t t = time(NULL);
+    const struct tm time = *localtime(&t);
 
-    int input;
-    do
-        input = _getch();
-        /* Wait for uppercase or lowercase Y/N to be pressed. */
-    while (input != Y_LC_KEY_CODE && input != Y_UC_KEY_CODE
-           && input != N_LC_KEY_CODE && input != N_UC_KEY_CODE);
+    /* Concatenate the month, day, year, hour, minute, and second with leading zeroes. */
+    static char buffer[20];
+    sprintf(buffer, IO_TIMESTAMP_FORMAT, IO_LEADING_ZERO(time.tm_mon + 1), time.tm_mon + 1,
+            IO_LEADING_ZERO(time.tm_mday), time.tm_mday, IO_CONVERT_YEAR(time.tm_year),
+            IO_LEADING_ZERO(time.tm_hour), time.tm_hour, IO_LEADING_ZERO(time.tm_min),
+            time.tm_min, IO_LEADING_ZERO(time.tm_sec), time.tm_sec);
 
-    return input == Y_LC_KEY_CODE || input == Y_UC_KEY_CODE;
-}
-
-/*
- * Changes the color of the text in the console window.
- * Returns the previous color that was overwritten.
- * Θ(1)
- */
-WORD io_color(const WORD color)
-{
-    WORD prevColor = 0;
-    CONSOLE_SCREEN_BUFFER_INFO info;
-    const HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    if (GetConsoleScreenBufferInfo(console, &info))
-    {
-        prevColor = info.wAttributes;
-        SetConsoleTextAttribute(console, color);
-    }
-
-    return prevColor;
+    return buffer;
 }

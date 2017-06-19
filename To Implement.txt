@@ -2,4 +2,3 @@ Trie
 QuadTree
 PriorityQueue
 Dictionary
-TreeMap
