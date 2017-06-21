@@ -551,6 +551,7 @@ void vect_append(Vector* const vect, const Vector* const other)
 /*
  * Grows the underlying array to be able to store at least `min_size` elements.
  * The Vector's capacity will always be of the form `capacity = 10 * 2^n`
+ * // TODO: Vector with 52 elements grew to 160. Investigate.
  * Θ(n)
  */
 void vect_grow_to(Vector* const vect, const size_t min_size)

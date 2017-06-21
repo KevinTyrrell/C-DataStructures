@@ -57,7 +57,7 @@ struct list_Iterator
     /* Keep track of where we are inside the List. */
     unsigned int index;
     list_Node *left, *right, *last;
-    /* Reference to the Vector that it is iterating through. */
+    /* Reference to the List that it is iterating through. */
     LinkedList *list;
 };
 

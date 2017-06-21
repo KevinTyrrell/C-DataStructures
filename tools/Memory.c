@@ -125,7 +125,7 @@ void mem_free(void *const ptr, const size_t size)
  */
 void mem_status()
 {
-    printf("Active allocations %-5zu Blocks allocated: %-10zu Leakage: %.2f%%\n",
+    printf("Active allocations %-5u Blocks allocated: %-10u Leakage: %.2f%%\n",
            MEM_CURRENT_ALLOCATIONS, MEM_BLOCKS_ALLOCATED,
            100.0 * MEM_CURRENT_ALLOCATIONS / MEM_TOTAL_ALLOCATIONS);
 }

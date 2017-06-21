@@ -42,7 +42,6 @@ typedef struct ReadWriteSync ReadWriteSync;
 /* ~~~~~ Constructors ~~~~~ */
 
 ReadWriteSync* ReadWriteSync_new();
-void mutex_signal(HANDLE mutex);
 
 /* ~~~~~ Mutators ~~~~~ */
 
