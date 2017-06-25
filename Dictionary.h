@@ -56,17 +56,24 @@ Dictionary* Dictionary_new(int(*compare)(const void*, const void*),
 
 /* ~~~~~ Accessors ~~~~~ */
 
+/* Returns the value of an entry that corresponds to the specified key. */
+void* dict_get(const Dictionary* const dict, const void* const key);
 /* Returns the number of elements in the Dictionary. */
 size_t dict_size(const Dictionary* const dict);
 /* Returns true if the Dictionary is empty. */
 bool dict_empty(const Dictionary* const dict);
+/* Returns true if the Dictionary contains the specified key. */
+bool dict_contains(const Dictionary* const dict, const void* const key);
 /* Prints out the structure of the Dictionary to the console window. */
 void dict_print_tree(const Dictionary* const dict);
+/* Returns a shallow copy of the Dictionary. */
+Dictionary* dict_clone(const Dictionary* const dict);
 
 /* ~~~~~ Mutators ~~~~~ */
 
 /* Inserts a key/value pair into the Dictionary. */
 void dict_put(Dictionary* const dict, const void* const key, const void* const value);
+// TODO: Implement remove.
 /* Removes all key/value pairs from the Dictionary. */
 void dict_clear(Dictionary* const dict);
 
@@ -86,7 +93,7 @@ void dict_destroy(Dictionary* const dict);
 dict_Iterator* dict_iter(const Dictionary* const dict, const enum dict_iter_traversal traverse_type);
 
 /* Returns the iterator's current key/value pair and advances it forward. */
-void* dict_iter_next(dict_Iterator* const iter, void** value);
+void* dict_iter_next(dict_Iterator* const iter, void **value);
 /* Returns true if the iterator has a next key/value pair. */
 bool dict_iter_has_next(const dict_Iterator* const iter);
 /* De-constructor function. */

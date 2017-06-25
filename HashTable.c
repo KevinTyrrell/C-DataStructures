@@ -113,6 +113,7 @@ HashTable* HashTable_new(unsigned int(*hash)(const void*),
 
 /*
  * Returns the value of an entry that corresponds to the specified key.
+ * Returns NULL if the key is not found in the Table.
  * Ω(1), O(n)
  */
 void* table_get(const HashTable* const table, const void* const key)
@@ -243,11 +244,11 @@ HashTable* table_clone(const HashTable* const table)
         const void *value, *key = table_iter_next(iter, &value);
         table_put(copy, key, value);
     }
+    table_iter_destroy(iter);
 
     /* Unlock the data structure. */
     sync_read_end(table->rw_sync);
 
-    table_iter_destroy(iter);
     return copy;
 }
 

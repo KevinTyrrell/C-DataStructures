@@ -72,10 +72,11 @@ struct Dictionary
 /* Structure to assist in looping through Dictionary. */
 struct dict_Iterator
 {
-    // TODO
-    dict_Node*(*next)(dict_Iterator*);
     const dict_Node *current;
     Vector *stack;
+
+    /* Function pointer. */
+    dict_Node*(*next)(dict_Iterator*);
 };
 
 /* Local functions. */
@@ -87,7 +88,7 @@ static dict_Node* dict_iter_in_order(dict_Iterator* const iter);
 static dict_Node* dict_iter_pre_order(dict_Iterator* const iter);
 static dict_Node* dict_iter_post_order(dict_Iterator* const iter);
 static unsigned int dict_Node_height(const dict_Node* const node);
-static void dict_enforce_rb_properties(Dictionary* const dict, dict_Node *const child);
+static void dict_enforce_rb_properties(Dictionary* const dict, dict_Node *child);
 static void dict_assign_child(dict_Node* const parent, dict_Node* const child, const bool direction);
 static void dict_heapify(const dict_Node* const current, const dict_Node** const arr, const unsigned int index);
 static void dict_Node_destroy(dict_Node* const node);
@@ -110,6 +111,29 @@ Dictionary* Dictionary_new(int(*compare)(const void*, const void*),
 }
 
 /*
+ * Returns the value of an entry that corresponds to the specified key.
+ * Returns NULL if the key does not exist in the Dictionary.
+ * Θ(log(n))
+ */
+void* dict_get(const Dictionary* const dict, const void* const key)
+{
+    io_assert(dict != NULL, IO_MSG_NULL_PTR);
+    io_assert(key != NULL, IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(dict->rw_sync);
+
+    int compared;
+    const dict_Node* const searched = dict_binary_search(dict, key, &compared);
+    const void* const value = (searched != NULL && compared == 0) ? searched->value : NULL;
+
+    /* Unlock the data structure. */
+    sync_read_end(dict->rw_sync);
+
+    return (void*)value;
+}
+
+/*
  * Returns the number of elements in the Dictionary.
  * Θ(1)
  */
@@ -117,10 +141,12 @@ size_t dict_size(const Dictionary* const dict)
 {
     io_assert(dict != NULL, IO_MSG_NULL_PTR);
 
+    /* Lock the data structure to future writers. */
     sync_read_start(dict->rw_sync);
 
     const size_t size = dict->size;
 
+    /* Unlock the data structure. */
     sync_read_end(dict->rw_sync);
 
     return size;
@@ -134,13 +160,36 @@ bool dict_empty(const Dictionary* const dict)
 {
     io_assert(dict != NULL, IO_MSG_NULL_PTR);
 
+    /* Lock the data structure to future writers. */
     sync_read_start(dict->rw_sync);
 
     const bool empty = dict->size == 0;
 
+    /* Unlock the data structure. */
     sync_read_end(dict->rw_sync);
 
     return empty;
+}
+
+/*
+ * Returns true if the Dictionary contains the specified key.
+ * Θ(log(n))
+ */
+bool dict_contains(const Dictionary* const dict, const void* const key)
+{
+    io_assert(dict != NULL, IO_MSG_NULL_PTR);
+    io_assert(key != NULL, IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(dict->rw_sync);
+
+    int compared;
+    const bool located = dict_binary_search(dict, key, &compared) != NULL && compared == 0;
+
+    /* Unlock the data structure. */
+    sync_read_end(dict->rw_sync);
+
+    return located;
 }
 
 /*
@@ -151,6 +200,7 @@ void dict_print_tree(const Dictionary* const dict)
 {
     io_assert(dict != NULL, IO_MSG_NULL_PTR);
 
+    /* Lock the data structure to future writers. */
     sync_read_start(dict->rw_sync);
 
     if (dict->size > 0)
@@ -209,13 +259,43 @@ void dict_print_tree(const Dictionary* const dict)
         mem_free(heap, elements * sizeof(dict_Node*));
     }
 
+    /* Unlock the data structure. */
     sync_read_end(dict->rw_sync);
+}
+
+/*
+ * Returns a shallow copy of the Dictionary.
+ * Θ(n)
+ */
+Dictionary* dict_clone(const Dictionary* const dict)
+{
+    io_assert(dict != NULL, IO_MSG_NULL_PTR);
+
+    Dictionary* const copy = Dictionary_new(dict->compare, dict->toString);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(dict->rw_sync);
+
+    /* Pre-order iteration should create the same exact Dictionary. */
+    dict_Iterator* const iter = dict_iter(dict, PRE_ORDER);
+    while (dict_iter_has_next(iter))
+    {
+        void *value;
+        const void* const key = dict_iter_next(iter, &value);
+        dict_put(copy, key, value);
+    }
+    dict_iter_destroy(iter);
+
+    /* Unlock the data structure. */
+    sync_read_end(dict->rw_sync);
+
+    return copy;
 }
 
 /*
  * Inserts a key/value pair into the Dictionary.
  * If the specified key already exists in the Dictionary, then it's value is replaced with `value`.
- * Ω(1), O(log(n))
+ * Θ(log(n))
  */
 void dict_put(Dictionary* const dict, const void* const key, const void* const value)
 {
@@ -223,6 +303,7 @@ void dict_put(Dictionary* const dict, const void* const key, const void* const v
     io_assert(key != NULL, IO_MSG_NULL_PTR);
     io_assert(value != NULL, IO_MSG_NULL_PTR);
 
+    /* Lock the data structure to future readers/writers. */
     sync_write_start(dict->rw_sync);
 
     int compared;
@@ -242,6 +323,7 @@ void dict_put(Dictionary* const dict, const void* const key, const void* const v
     }
     else located->value = value;
 
+    /* Unlock the data structure. */
     sync_write_end(dict->rw_sync);
 }
 
@@ -326,7 +408,7 @@ dict_Iterator* dict_iter(const Dictionary* const dict, const enum dict_iter_trav
  * The key will be returned and the value will be assigned to the data of the parameter.
  * Ω(1), O(log(n))
  */
-void* dict_iter_next(dict_Iterator* const iter, void** value)
+void* dict_iter_next(dict_Iterator* const iter, void **value)
 {
     io_assert(iter != NULL, IO_MSG_NULL_PTR);
     io_assert(value != NULL, IO_MSG_NULL_PTR);
@@ -539,9 +621,11 @@ unsigned int dict_Node_height(const dict_Node* const node)
 
 /*
  * Inspect a Red Node, and adjust the Dictionary in order to preserve red black properties.
+ * Ω(1), O(log(n))
  */
 void dict_enforce_rb_properties(Dictionary* const dict, dict_Node *child)
 {
+    io_assert(dict != NULL, IO_MSG_NULL_PTR);
     io_assert(child != NULL, IO_MSG_NULL_PTR);
 
     bool exit = true;
