@@ -33,6 +33,7 @@ SOFTWARE.
 #include "tools/Memory.h"
 #include "tools/Synchronize.h"
 #include "tools/Math.h"
+#include "Vector.h"
 
 /* Anonymous structures. */
 typedef struct Dictionary Dictionary;
@@ -66,6 +67,8 @@ void dict_print_tree(const Dictionary* const dict);
 
 /* Inserts a key/value pair into the Dictionary. */
 void dict_put(Dictionary* const dict, const void* const key, const void* const value);
+/* Removes all key/value pairs from the Dictionary. */
+void dict_clear(Dictionary* const dict);
 
 /* ~~~~~ De-constructors ~~~~~ */
 
@@ -73,3 +76,18 @@ void dict_destroy(Dictionary* const dict);
 
 /* ~~~~~ Iterator ~~~~~ */
 
+/*
+ * Constructs a new Iterator for the Dictionary.
+ *
+ * NOTE: The Iterator must be de-constructed after its usable life-span.
+ * NOTE: During the life-span of the Iterator, DO NOT modify the Dictionary.
+ * NOTE: The Iterator is NOT thread-safe. Do not share the Iterator across threads.
+ */
+dict_Iterator* dict_iter(const Dictionary* const dict, const enum dict_iter_traversal traverse_type);
+
+/* Returns the iterator's current key/value pair and advances it forward. */
+void* dict_iter_next(dict_Iterator* const iter, void** value);
+/* Returns true if the iterator has a next key/value pair. */
+bool dict_iter_has_next(const dict_Iterator* const iter);
+/* De-constructor function. */
+void dict_iter_destroy(dict_Iterator* const iter);

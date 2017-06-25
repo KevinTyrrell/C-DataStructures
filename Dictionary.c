@@ -41,10 +41,11 @@ SOFTWARE.
 #define PARENT(node) node->parent
 #define GRANDPARENT(node) PARENT(PARENT(node))
 #define IS_ROOT(node) (PARENT(node) == NULL)
+#define LEAF(node) (node->left == NULL && node->right == NULL)
 #define DIRECTION(child, parent) (parent->left == child ? LEFT : RIGHT)
 #define CHILD(node, direction) *(direction == LEFT ? &node->left : &node->right)
 #define COLOR(node) (node == NULL || node->color == BLACK ? BLACK : RED)
-#define SWAP_PTR(p1, p2) const void *t = p1; p1 = p2; p2 = t
+#define SWAP_PTR(p1, p2) void *t = p1; p1 = p2; p2 = t
 
 /* Node structure. */
 typedef struct dict_Node
@@ -68,24 +69,28 @@ struct Dictionary
     char*(*toString)(const void*, const void*);
 };
 
-/* Structure to assist in looping through List. */
+/* Structure to assist in looping through Dictionary. */
 struct dict_Iterator
 {
-    /* Keep track of where we are inside the Dictionary. */
+    // TODO
+    dict_Node*(*next)(dict_Iterator*);
     const dict_Node *current;
-    /* Reference to the Dictionary that it is iterating through. */
-    const Dictionary *dict;
-    enum dict_iter_traversal mode;
+    Vector *stack;
 };
 
 /* Local functions. */
 static dict_Node* dict_Node_new(const void* const key, const void* const value);
 static dict_Node* dict_binary_search(const Dictionary* const dict, const void* const key, int* const compared);
 static dict_Node* dict_Node_uncle(const dict_Node* const child);
+static dict_Node* dict_iter_next_node(dict_Iterator* const iter);
+static dict_Node* dict_iter_in_order(dict_Iterator* const iter);
+static dict_Node* dict_iter_pre_order(dict_Iterator* const iter);
+static dict_Node* dict_iter_post_order(dict_Iterator* const iter);
 static unsigned int dict_Node_height(const dict_Node* const node);
 static void dict_enforce_rb_properties(Dictionary* const dict, dict_Node *const child);
 static void dict_assign_child(dict_Node* const parent, dict_Node* const child, const bool direction);
 static void dict_heapify(const dict_Node* const current, const dict_Node** const arr, const unsigned int index);
+static void dict_Node_destroy(dict_Node* const node);
 
 /*
  * Constructor function.
@@ -241,6 +246,120 @@ void dict_put(Dictionary* const dict, const void* const key, const void* const v
 }
 
 /*
+ * Removes all key/value pairs from the Dictionary.
+ * Θ(n)
+ */
+void dict_clear(Dictionary* const dict)
+{
+    io_assert(dict != NULL, IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future readers/writers. */
+    sync_write_start(dict->rw_sync);
+
+    dict_Iterator* const iter = dict_iter(dict, POST_ORDER);
+    while (dict_iter_has_next(iter))
+    {
+        dict_Node* const child = dict_iter_next_node(iter),
+                *const parent = PARENT(child);
+
+        if (parent != NULL)
+        {
+            /* Ensure the iterator cannot access de-allocated memory later on. */
+            CHILD(parent, DIRECTION(child, parent)) = NULL;
+            iter->current = dict->root;
+        }
+        dict_Node_destroy(child);
+    }
+    dict_iter_destroy(iter);
+
+    dict->size = 0;
+    dict->root = NULL;
+
+    /* Unlock the data structure. */
+    sync_write_end(dict->rw_sync);
+}
+
+/*
+ * De-constructor function.
+ * Θ(n)
+ */
+void dict_destroy(Dictionary* const dict)
+{
+    dict_clear(dict);
+    sync_destroy(dict->rw_sync);
+    mem_free(dict, sizeof(Dictionary));
+}
+
+/*
+ * Constructor function.
+ * Θ(1)
+ */
+dict_Iterator* dict_iter(const Dictionary* const dict, const enum dict_iter_traversal traverse_type)
+{
+    io_assert(dict != NULL, IO_MSG_NULL_PTR);
+    io_assert(traverse_type >= IN_ORDER && traverse_type <= POST_ORDER, IO_MSG_NOT_SUPPORTED);
+
+    dict_Iterator* const iter = mem_calloc(1, sizeof(dict_Iterator));
+
+    iter->stack = Vector_new(NULL, NULL);
+    if (!dict_empty(dict))
+    {
+        /* Post order needs an additional pointer to work properly. */
+        if (traverse_type != PRE_ORDER)
+            iter->current = dict->root;
+        vect_push_front(iter->stack, dict->root);
+    }
+
+    /* Setup function pointers depending on iteration type. */
+    switch (traverse_type)
+    {
+    case IN_ORDER: iter->next = &dict_iter_in_order; break;
+    case PRE_ORDER: iter->next = &dict_iter_pre_order; break;
+    case POST_ORDER: iter->next = &dict_iter_post_order; break;
+    }
+
+    return iter;
+}
+
+/*
+ * Returns the iterator's current key/value pair and advances it forward.
+ * The key will be returned and the value will be assigned to the data of the parameter.
+ * Ω(1), O(log(n))
+ */
+void* dict_iter_next(dict_Iterator* const iter, void** value)
+{
+    io_assert(iter != NULL, IO_MSG_NULL_PTR);
+    io_assert(value != NULL, IO_MSG_NULL_PTR);
+    io_assert(dict_iter_has_next(iter), IO_MSG_OUT_OF_BOUNDS);
+
+    const dict_Node* const iterated = dict_iter_next_node(iter);
+    *value = (void*)iterated->value;
+
+    return (void*)iterated->key;
+}
+
+/*
+ * Returns true if the iterator has a next key/value pair.
+ * Θ(1)
+ */
+bool dict_iter_has_next(const dict_Iterator* const iter)
+{
+    io_assert(iter != NULL, IO_MSG_NULL_PTR);
+    return !vect_empty(iter->stack);
+}
+
+/*
+ * De-constructor function.
+ * Θ(n)
+ */
+void dict_iter_destroy(dict_Iterator* const iter)
+{
+    io_assert(iter != NULL, IO_MSG_NULL_PTR);
+    vect_destroy(iter->stack);
+    mem_free(iter, sizeof(dict_Iterator));
+}
+
+/*
  * Constructor function.
  * Θ(1)
  */
@@ -299,6 +418,113 @@ dict_Node* dict_Node_uncle(const dict_Node* const child)
     io_assert(gparent != NULL, IO_MSG_NULL_PTR);
 
     return CHILD(gparent, !DIRECTION(parent, gparent));
+}
+
+/*
+ * Iterates over the next Node in the Dictionary.
+ * The way in which it iterates is defined in the iterator's constructor.
+ * Ω(1), O(log(n))
+ */
+dict_Node* dict_iter_next_node(dict_Iterator* const iter)
+{
+    io_assert(iter != NULL, IO_MSG_NULL_PTR);
+    io_assert(dict_iter_has_next(iter), IO_MSG_OUT_OF_BOUNDS);
+    return iter->next(iter);
+}
+
+/*
+ * Iterates the next element using in-order traversal.
+ * Iterator's current element must not be NULL.
+ * Ω(1), O(log(n))
+*/
+dict_Node* dict_iter_in_order(dict_Iterator* const iter)
+{
+    io_assert(iter != NULL, IO_MSG_NULL_PTR);
+    io_assert(dict_iter_has_next(iter), IO_MSG_OUT_OF_BOUNDS);
+
+    const dict_Node *iterated = NULL;
+
+    while (iterated == NULL)
+    {
+        /* Peek the top of the Stack. */
+        const dict_Node* const next = vect_front(iter->stack);
+        vect_pop_front(iter->stack);
+
+        /* Find the in-order successor. */
+        // TODO: Create functon or macro for this.
+        const dict_Node *successor = next->left;
+        while (successor != NULL && successor->right != NULL)
+            successor = successor->right;
+
+        /* Only return value when we've gone down the left subtree. */
+        if (successor == NULL || successor == iter->current)
+            iterated = iter->current = next;
+        else
+        {
+            if (next->right != NULL)
+                vect_push_front(iter->stack, next->right);
+            vect_push_front(iter->stack, next);
+            if (next->left != NULL)
+                vect_push_front(iter->stack, next->left);
+        }
+    }
+
+    return (dict_Node*)iterated;
+}
+
+/*
+ * Iterates the next element using pre-order traversal.
+ * Θ(1)
+ */
+dict_Node* dict_iter_pre_order(dict_Iterator* const iter)
+{
+    io_assert(iter != NULL, IO_MSG_NULL_PTR);
+    io_assert(dict_iter_has_next(iter), IO_MSG_OUT_OF_BOUNDS);
+
+    const dict_Node* const iterated = vect_front(iter->stack);
+    vect_pop_front(iter->stack);
+
+    if (iterated->right != NULL)
+        vect_push_front(iter->stack, iterated->right);
+    if (iterated->left != NULL)
+        vect_push_front(iter->stack, iterated->left);
+
+    return (dict_Node*)iterated;
+}
+
+/*
+ * Iterates the next element using post-order traversal.
+ * Iterator's current element must not be NULL.
+ * Ω(1), O(log(n))
+ */
+dict_Node* dict_iter_post_order(dict_Iterator* const iter)
+{
+    io_assert(iter != NULL, IO_MSG_NULL_PTR);
+    io_assert(dict_iter_has_next(iter), IO_MSG_OUT_OF_BOUNDS);
+
+    const dict_Node *iterated = NULL;
+
+    /* Keep going until we can actually return a value. */
+    while (iterated == NULL)
+    {
+        /* Peek the top of the Stack. */
+        const dict_Node* const next = vect_front(iter->stack);
+        /* Only return value when we've gone down both subtrees. */
+        if (LEAF(next) || (next->left == iter->current || next->right == iter->current))
+        {
+            vect_pop_front(iter->stack);
+            iterated = iter->current = next;
+        }
+        else
+        {
+            if (next->right != NULL)
+                vect_push_front(iter->stack, next->right);
+            if (next->left != NULL)
+                vect_push_front(iter->stack, next->left);
+        }
+    }
+
+    return (dict_Node*)iterated;
 }
 
 /*
@@ -397,4 +623,13 @@ void dict_heapify(const dict_Node* const current, const dict_Node** const arr, c
     arr[index] = current;
     dict_heapify(current->left, arr, 2 * index + 1);
     dict_heapify(current->right, arr, 2 * index + 2);
+}
+
+/*
+ * De-constructor function.
+ * Θ(1)
+ */
+static void dict_Node_destroy(dict_Node* const node)
+{
+    mem_free(node, sizeof(dict_Node));
 }
