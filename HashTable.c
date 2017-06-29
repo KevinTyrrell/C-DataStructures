@@ -255,6 +255,7 @@ HashTable* table_clone(const HashTable* const table)
 /*
  * Inserts a key/value pair into the Table.
  * If the specified key already exists in the Table, then it's value is replaced with `value`.
+ * TODO: Update parameters and documentation to match dictionary.
  * Ω(1), O(n)
  */
 void table_put(HashTable* const table, const void* const key, const void* const value)

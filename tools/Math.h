@@ -3,7 +3,7 @@
  * File: Math.h
  * Date: Jun 09, 2017
  * Name: Kevin Tyrrell
- * Version: 1.0.0
+ * Version: 1.1.0
  */
 
 /*
@@ -32,3 +32,5 @@ SOFTWARE.
 
 /* Returns the base to the power of the exponent. */
 unsigned long long math_pow(unsigned long long base, unsigned int exp);
+/* Returns the max of two integers. */
+unsigned int math_max(const unsigned int a, const unsigned int b);

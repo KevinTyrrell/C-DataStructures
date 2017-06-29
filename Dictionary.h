@@ -72,8 +72,9 @@ Dictionary* dict_clone(const Dictionary* const dict);
 /* ~~~~~ Mutators ~~~~~ */
 
 /* Inserts a key/value pair into the Dictionary. */
-void dict_put(Dictionary* const dict, const void* const key, const void* const value);
-// TODO: Implement remove.
+void* dict_put(Dictionary *const dict, const void *const key, const void *const value);
+/* Removes a key/value pair from the Dictionary and returns true if the removal was successful. */
+void* dict_remove(Dictionary *const dict, const void *const key);
 /* Removes all key/value pairs from the Dictionary. */
 void dict_clear(Dictionary* const dict);
 

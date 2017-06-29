@@ -38,14 +38,13 @@ SOFTWARE.
 #define RIGHT (bool)true
 
 /* Basic tree navigation. */
-#define PARENT(node) node->parent
-#define GRANDPARENT(node) PARENT(PARENT(node))
-#define IS_ROOT(node) (PARENT(node) == NULL)
-#define LEAF(node) (node->left == NULL && node->right == NULL)
-#define DIRECTION(child, parent) (parent->left == child ? LEFT : RIGHT)
-#define CHILD(node, direction) *(direction == LEFT ? &node->left : &node->right)
-#define COLOR(node) (node == NULL || node->color == BLACK ? BLACK : RED)
-#define SWAP_PTR(p1, p2) void *t = p1; p1 = p2; p2 = t
+#define PARENT(node) ((node)->parent)
+#define ROOT(node) (PARENT(node) == NULL)
+#define LEAF(node) ((node)->left == NULL && (node)->right == NULL)
+#define DIRECTION(child, parent) ((parent)->left == (child) ? LEFT : RIGHT)
+#define CHILD(node, direction) *((direction) == LEFT ? &(node)->left : &(node)->right)
+#define COLOR(node) ((node) == NULL || (node)->color == BLACK ? BLACK : RED)
+#define SWAP_PTR(p1, p2) do { void *t = p1; p1 = p2; p2 = t; } while(false)
 
 /* Node structure. */
 typedef struct dict_Node
@@ -82,15 +81,20 @@ struct dict_Iterator
 /* Local functions. */
 static dict_Node* dict_Node_new(const void* const key, const void* const value);
 static dict_Node* dict_binary_search(const Dictionary* const dict, const void* const key, int* const compared);
-static dict_Node* dict_Node_uncle(const dict_Node* const child);
+static dict_Node* dict_successor(const dict_Node* const node);
+static dict_Node* dict_sibling(const dict_Node* const child);
+static dict_Node* dict_uncle(const dict_Node* const child);
 static dict_Node* dict_iter_next_node(dict_Iterator* const iter);
 static dict_Node* dict_iter_in_order(dict_Iterator* const iter);
 static dict_Node* dict_iter_pre_order(dict_Iterator* const iter);
 static dict_Node* dict_iter_post_order(dict_Iterator* const iter);
-static unsigned int dict_Node_height(const dict_Node* const node);
+static unsigned int dict_height(const dict_Node *const node);
+static void dict_rotate(Dictionary *const dict, dict_Node *const child, dict_Node *const parent);
 static void dict_enforce_rb_properties(Dictionary* const dict, dict_Node *child);
+static void dict_enforce_rb_delete(Dictionary *const dict, const dict_Node *const double_black);
 static void dict_assign_child(dict_Node* const parent, dict_Node* const child, const bool direction);
 static void dict_heapify(const dict_Node* const current, const dict_Node** const arr, const unsigned int index);
+static void dict_delete(Dictionary *const dict, dict_Node *const node);
 static void dict_Node_destroy(dict_Node* const node);
 
 /*
@@ -206,7 +210,7 @@ void dict_print_tree(const Dictionary* const dict)
     if (dict->size > 0)
     {
         /* Parse the Dictionary into a heap. */
-        const size_t height = dict_Node_height(dict->root),
+        const size_t height = dict_height(dict->root),
                 elements = (unsigned int)math_pow(2, height) - 1;
         const dict_Node** const heap = mem_calloc(elements, sizeof(dict_Node*));
         dict_heapify(dict->root, heap, 0);
@@ -294,14 +298,17 @@ Dictionary* dict_clone(const Dictionary* const dict)
 
 /*
  * Inserts a key/value pair into the Dictionary.
- * If the specified key already exists in the Dictionary, then it's value is replaced with `value`.
+ * If the Dictionary already contained a mapping for the key, the old value is replaced.
+ * Returns the previous value that was replaced or NULL if this is a new mapping.
  * Θ(log(n))
  */
-void dict_put(Dictionary* const dict, const void* const key, const void* const value)
+void* dict_put(Dictionary *const dict, const void *const key, const void *const value)
 {
     io_assert(dict != NULL, IO_MSG_NULL_PTR);
     io_assert(key != NULL, IO_MSG_NULL_PTR);
     io_assert(value != NULL, IO_MSG_NULL_PTR);
+
+    const void *replaced = NULL;
 
     /* Lock the data structure to future readers/writers. */
     sync_write_start(dict->rw_sync);
@@ -313,18 +320,81 @@ void dict_put(Dictionary* const dict, const void* const key, const void* const v
     if (located == NULL || compared != 0)
     {
         dict_Node* const node = dict_Node_new(key, value);
-
-        /* Place the new Node into the dictionary. */
+        /* Dictionary is empty, insert Node as the root. */
         if (located == NULL)
+        {
+            node->color = BLACK;
             dict->root = node;
-        else dict_assign_child(located, node, compared > 0);
-        dict_enforce_rb_properties(dict, node);
+        }
+        /* Insert the Node, then repair then enforce the Red/Black properties. */
+        else
+        {
+            dict_assign_child(located, node, compared > 0);
+            dict_enforce_rb_properties(dict, node);
+        }
+
         dict->size++;
     }
-    else located->value = value;
+    else
+    {
+        replaced = located->value;
+        located->value = value;
+    }
 
     /* Unlock the data structure. */
     sync_write_end(dict->rw_sync);
+
+    return (void*)replaced;
+}
+
+/*
+ * Removes a key/value pair from the Dictionary and returns true if the removal was successful.
+ * TODO: Update documentation.
+ * Θ(log(n))
+ */
+void* dict_remove(Dictionary *const dict, const void *const key)
+{
+    io_assert(dict != NULL, IO_MSG_NULL_PTR);
+    io_assert(key != NULL, IO_MSG_NULL_PTR);
+
+    const void *removed = NULL;
+
+    /* Lock the data structure to future readers/writers. */
+    sync_write_start(dict->rw_sync);
+
+    int compared;
+    dict_Node* located = dict_binary_search(dict, key, &compared);
+    /* If Node is located, then we can safely say that we will delete it. */
+    if (located != NULL && compared == 0)
+    {
+        /* Two children: find in-order successor, delete that one instead. */
+        if (located->left != NULL && located->right != NULL)
+        {
+            dict_Node* const successor = dict_successor(located);
+            located->key = successor->key;
+            located->value = successor->value;
+            located = successor;
+        }
+
+        if (ROOT(located))
+        {
+            dict_Node* const heir = CHILD(located, (located->left != NULL) ? LEFT : RIGHT);
+            if (heir != NULL) heir->color = BLACK;
+            dict->root = heir;
+        }
+        else if (COLOR(located) == BLACK)
+            dict_enforce_rb_delete(dict, located);
+
+        /* Remove the Node from the Dictionary. */
+        removed = located->value;
+        dict_delete(dict, located);
+        dict->size--;
+    }
+
+    /* Unlock the data structure. */
+    sync_write_end(dict->rw_sync);
+
+    return (void*)removed;
 }
 
 /*
@@ -488,18 +558,42 @@ dict_Node* dict_binary_search(const Dictionary* const dict, const void* const ke
 }
 
 /*
- * Returns the Uncle of the specified child Node.
+ * Returns the successor of the specified Node.
+ * The success is the left-most Node in the right subtree.
+ * Θ(log(n))
+ */
+dict_Node* dict_successor(const dict_Node* const node)
+{
+    io_assert(node != NULL, IO_MSG_NULL_PTR);
+    io_assert(node->right != NULL, IO_MSG_OUT_OF_BOUNDS);
+    const dict_Node *successor = node->right;
+    while (successor->left != NULL)
+        successor = successor->left;
+    return (dict_Node*)successor;
+}
+
+/*
+ * Returns the sibling of the specified child Node.
  * Θ(1)
  */
-dict_Node* dict_Node_uncle(const dict_Node* const child)
+dict_Node* dict_sibling(const dict_Node* const child)
 {
     io_assert(child != NULL, IO_MSG_NULL_PTR);
     const dict_Node* const parent = PARENT(child);
-    io_assert(parent != NULL, IO_MSG_NULL_PTR);
-    const dict_Node* const gparent = PARENT(parent);
-    io_assert(gparent != NULL, IO_MSG_NULL_PTR);
+    io_assert(parent != NULL, IO_MSG_OUT_OF_BOUNDS);
+    /* Return child of parent in the opposite direction of child. */
+    return (CHILD(parent, !DIRECTION(child, parent)));
+}
 
-    return CHILD(gparent, !DIRECTION(parent, gparent));
+/*
+ * Returns the Uncle of the specified child Node.
+ * Θ(1)
+ */
+dict_Node* dict_uncle(const dict_Node* const child)
+{
+    io_assert(child != NULL, IO_MSG_NULL_PTR);
+    io_assert(!ROOT(child), IO_MSG_OUT_OF_BOUNDS);
+    return dict_sibling(PARENT(child));
 }
 
 /*
@@ -532,19 +626,20 @@ dict_Node* dict_iter_in_order(dict_Iterator* const iter)
         const dict_Node* const next = vect_front(iter->stack);
         vect_pop_front(iter->stack);
 
-        /* Find the in-order successor. */
-        // TODO: Create functon or macro for this.
+        /* Find the In-Order Predecessor. */
         const dict_Node *successor = next->left;
         while (successor != NULL && successor->right != NULL)
             successor = successor->right;
+
+        /* Note to go down right-wards, unless we've already been there. */
+        if (successor != iter->current && next->right != NULL)
+            vect_push_front(iter->stack, next->right);
 
         /* Only return value when we've gone down the left subtree. */
         if (successor == NULL || successor == iter->current)
             iterated = iter->current = next;
         else
         {
-            if (next->right != NULL)
-                vect_push_front(iter->stack, next->right);
             vect_push_front(iter->stack, next);
             if (next->left != NULL)
                 vect_push_front(iter->stack, next->left);
@@ -613,10 +708,36 @@ dict_Node* dict_iter_post_order(dict_Iterator* const iter)
  * Returns the height of a given Node..
  * Θ(n)
  */
-unsigned int dict_Node_height(const dict_Node* const node)
+unsigned int dict_height(const dict_Node *const node)
 {
     if (node == NULL) return 0;
-    return 1 + max(dict_Node_height(node->left), dict_Node_height(node->right));
+    return 1 + math_max(dict_height(node->left), dict_height(node->right));
+}
+
+/*
+ * Rotates a child Node around a parent Node.
+ * NOTE: After the rotation, the BLACK property of the root may be disturbed.
+ * Θ(1)
+ */
+void dict_rotate(Dictionary *const dict, dict_Node *const child, dict_Node *const parent)
+{
+    io_assert(dict != NULL, IO_MSG_NULL_PTR);
+    io_assert(child != NULL, IO_MSG_NULL_PTR);
+    io_assert(parent != NULL, IO_MSG_NULL_PTR);
+
+    /* Grandparent adopts the child. */
+    dict_Node* const grandparent = PARENT(parent);
+    if (grandparent != NULL)
+        dict_assign_child(grandparent, child, DIRECTION(parent, grandparent));
+    else
+    {
+        dict->root = child;
+        PARENT(child) = NULL;
+    }
+
+    const bool rotate_dir = DIRECTION(child, parent);
+    dict_assign_child(parent, CHILD(child, !rotate_dir), rotate_dir);
+    dict_assign_child(child, parent, !rotate_dir);
 }
 
 /*
@@ -627,54 +748,94 @@ void dict_enforce_rb_properties(Dictionary* const dict, dict_Node *child)
 {
     io_assert(dict != NULL, IO_MSG_NULL_PTR);
     io_assert(child != NULL, IO_MSG_NULL_PTR);
+    io_assert(!ROOT(child), IO_MSG_OUT_OF_BOUNDS);
 
-    bool exit = true;
-    /* Case Zero: If child happens to be the root, re-color him BLACK. */
-    if (IS_ROOT(child))
-        child->color = BLACK;
-    else if (COLOR(child) == RED && COLOR(PARENT(child)) == RED)
-        exit = false;
-    if (exit) return;
+    /* Only violation is a RED-RED relationship. */
+    if (COLOR(child) != RED || COLOR(PARENT(child)) != RED) return;
 
-    dict_Node* const uncle = dict_Node_uncle(child),
+    dict_Node* const uncle = dict_uncle(child),
             *parent = PARENT(child),
             *const gparent = PARENT(parent);
 
     /* Case One: If uncle is RED, re-color and traverse upwards. */
     if (COLOR(uncle) == RED)
     {
-        parent->color = BLACK;
         uncle->color = BLACK;
-        gparent->color = RED;
-        dict_enforce_rb_properties(dict, gparent);
+        if (!ROOT(gparent))
+        {
+            gparent->color = RED;
+            dict_enforce_rb_properties(dict, gparent);
+        }
     }
     else
     {
-        const bool child_dir = DIRECTION(child, parent),
-                parent_dir = DIRECTION(parent, gparent);
-
         /* Case Two: Angle orientation, prepare for next case. */
-        if (child_dir != parent_dir)
+        if (DIRECTION(child, parent) != DIRECTION(parent, gparent))
         {
-            dict_assign_child(gparent, child, !child_dir);
-            dict_assign_child(parent, CHILD(child, !child_dir), child_dir);
-            dict_assign_child(child, parent, !child_dir);
+            dict_rotate(dict, child, parent);
             SWAP_PTR(child, parent);
         }
 
-        /* Case Three: Line orientation. rotate around the grandparent and re-color. */
-        dict_Node* const ggparent = PARENT(gparent);
-        if (ggparent != NULL)
-            dict_assign_child(ggparent, parent, DIRECTION(gparent, ggparent));
-        else
-        {
-            PARENT(parent) = NULL;
-            dict->root = parent;
-        }
-        dict_assign_child(gparent, CHILD(parent, !parent_dir), parent_dir);
-        dict_assign_child(parent, gparent, !parent_dir);
-        parent->color = BLACK;
+        /* Case Three: Line orientation. Rotate around the grandparent and re-color. */
+        dict_rotate(dict, parent, gparent);
         gparent->color = RED;
+    }
+
+    parent->color = BLACK;
+}
+
+/*
+ * TODO
+ */
+void dict_enforce_rb_delete(Dictionary *const dict, const dict_Node *const double_black)
+{
+    io_assert(dict != NULL, IO_MSG_NULL_PTR);
+    io_assert(double_black != NULL, IO_MSG_NULL_PTR);
+    io_assert(!ROOT(double_black), IO_MSG_OUT_OF_BOUNDS);
+
+    /* Identify the parent, sibling, and nephews and their colors. */
+    dict_Node* const parent = PARENT(double_black), *const sibling = dict_sibling(double_black);
+    const bool direction = DIRECTION(double_black, parent);
+    dict_Node* const nephew_close = CHILD(sibling, direction),
+            *const nephew_far = CHILD(sibling, !direction);
+    const bool color_par = COLOR(parent), color_sib = COLOR(sibling),
+            color_nc = COLOR(nephew_close), color_nf = COLOR(nephew_far);
+
+    /* Case Two: Rotate sibling around parent and re-color. */
+    if (color_par == BLACK && color_sib == RED && color_nc == BLACK && color_nf == BLACK)
+    {
+        dict_rotate(dict, sibling, parent);
+        parent->color = RED;
+        sibling->color = BLACK;
+        dict_enforce_rb_delete(dict, double_black);
+    }
+    /* Case Three: Re-color and bubble problem upwards. */
+    else if (color_par == BLACK && color_sib == BLACK && color_nc == BLACK && color_nf == BLACK)
+    {
+        sibling->color = RED;
+        if (!ROOT(parent))
+            dict_enforce_rb_delete(dict, parent);
+    }
+    /* Case Four: Re-color parent and sibling. */
+    else if (color_par == RED && color_sib == BLACK && color_nc == BLACK && color_nf == BLACK)
+    {
+        parent->color = BLACK;
+        sibling->color = RED;
+    }
+    /* Case Five: Rotate close nephew around sibling and re-color. */
+    else if (color_nc == RED && color_nf == BLACK)
+    {
+        dict_rotate(dict, nephew_close, sibling);
+        nephew_close->color = BLACK;
+        sibling->color = RED;
+        dict_enforce_rb_delete(dict, double_black);
+    }
+    /* Case Six: Rotate sibling around parent and re-color. */
+    else
+    {
+        dict_rotate(dict, sibling, parent);
+        sibling->color = !ROOT(sibling) ? color_par : BLACK;
+        parent->color = nephew_far->color = BLACK;
     }
 }
 
@@ -686,7 +847,8 @@ void dict_enforce_rb_properties(Dictionary* const dict, dict_Node *child)
  */
 void dict_assign_child(dict_Node* const parent, dict_Node* const child, const bool direction)
 {
-    io_assert(parent != NULL || child != NULL, IO_MSG_NULL_PTR);
+    /* Ensure that at least one of the parameters is non-NULL. */
+    io_assert(child != NULL || parent != NULL, IO_MSG_NULL_PTR);
 
     /* Parent gains custody of the child. */
     if (parent != NULL)
@@ -707,6 +869,32 @@ void dict_heapify(const dict_Node* const current, const dict_Node** const arr, c
     arr[index] = current;
     dict_heapify(current->left, arr, 2 * index + 1);
     dict_heapify(current->right, arr, 2 * index + 2);
+}
+
+/*
+ * Removes a Node from it's surrounding neighbors.
+ * Θ(1)
+ */
+static void dict_delete(Dictionary *const dict, dict_Node *const node)
+{
+    io_assert(node != NULL, IO_MSG_NULL_PTR);
+    /* Nodes with two children cannot be deleted in this way. */
+    io_assert(node->left == NULL || node->right == NULL, IO_MSG_NOT_SUPPORTED);
+
+    dict_Node* const parent = PARENT(node);
+    const bool surviving_child_dir = node->left != NULL ? LEFT : RIGHT;
+    dict_Node* const surviving_child = CHILD(node, surviving_child_dir);
+
+    /* We are deleting the root of the Dictionary. */
+    if (parent == NULL)
+    {
+        if (surviving_child != NULL)
+            PARENT(surviving_child) = NULL;
+        dict->root = surviving_child;
+    }
+    else dict_assign_child(parent, surviving_child, DIRECTION(node, parent));
+
+    dict_Node_destroy(node);
 }
 
 /*
