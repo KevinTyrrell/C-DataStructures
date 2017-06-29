@@ -3,7 +3,7 @@
  * File: IO.h
  * Date: Jun 01, 2017
  * Name: Kevin Tyrrell
- * Version: 1.0.0
+ * Version: 2.0.0
  */
 
 /*
@@ -30,11 +30,9 @@ SOFTWARE.
 
 #pragma once
 
-#include <conio.h>
-#include <windows.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <assert.h>
+#include <time.h>
 
 /* Assert Macro. */
 #define io_assert(condition, msg) assert(condition && msg)
@@ -46,14 +44,10 @@ SOFTWARE.
 #define IO_MSG_NOT_SUPPORTED "Unable to perform this operation with a NULL user-provided member function!"
 #define IO_MSG_INVALID_SIZE "Unable to perform this operation with an invalid sizing parameter!"
 
-#define IO_LIGHT_TEAL 11
-#define IO_LIGHT_RED 12
-
 /* ~~~~~ Input/Output ~~~~~ */
 
-/* Displays an error message to the user. */
-void io_error(const char* const message);
-/* Returns true if the user selects yes to the displayed prompt. */
-bool io_prompt(const char *const message);
-/* Changes the color of the console window and returns the previous color. */
-WORD io_color(const WORD color);
+#define IO_CONSOLE_LOG(fmt, ...) do { fprintf(stderr, "%s: ", io_timestamp());\
+    fprintf(stderr, fmt, __VA_ARGS__); } while (0)
+
+/* Returns the current timestamp in String form. */
+char* io_timestamp();

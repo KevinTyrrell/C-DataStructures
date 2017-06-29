@@ -33,7 +33,7 @@ SOFTWARE.
 #include "tools/Memory.h"
 #include "tools/Synchronize.h"
 
-/* Anonymous structure. */
+/* Anonymous structures. */
 typedef struct HashTable HashTable;
 typedef struct table_Iterator table_Iterator;
 
@@ -43,11 +43,11 @@ typedef struct table_Iterator table_Iterator;
  * Constructs a new HashTable.
  * Hash - Returns a (preferably) unique and large integer value from a specified key.
  *        Data used to calculate Hash/Equals should not change while the key is in the Table.
- * Equals - Returns true if two Keys are equivalent.
+ * Equals - Returns true if two keys are equivalent.
  *          Two different keys in the Table may share the same hash result but cannot be equal.
  * toString - Returns the String representation of a specified key/value pair.
  *
- * NOTE: The Hash and Equals function MUST be defined.
+ * NOTE: The Hash and Equals functions MUST be defined.
  * NOTE: The Table must be de-constructed after its usable life-span.
  */
 HashTable* HashTable_new(unsigned int(*hash)(const void*),

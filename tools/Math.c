@@ -3,7 +3,7 @@
  * File: Math.c
  * Date: Jun 09, 2017
  * Name: Kevin Tyrrell
- * Version: 1.0.0
+ * Version: 1.1.0
  */
 
 /*
@@ -33,6 +33,7 @@ SOFTWARE.
 /*
  * Returns the base to the power of the exponent.
  * Integer-based power function.
+ * Θ(n)
  */
 unsigned long long math_pow(unsigned long long base, unsigned int exp)
 {
@@ -48,4 +49,13 @@ unsigned long long math_pow(unsigned long long base, unsigned int exp)
     }
 
     return result;
+}
+
+/*
+ * Returns the max of two integers.
+ * Θ(1)
+ */
+unsigned int math_max(const unsigned int a, const unsigned int b)
+{
+    return (a > b) ? a : b;
 }

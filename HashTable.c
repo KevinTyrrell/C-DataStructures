@@ -61,9 +61,8 @@ struct HashTable
 /* Bucket structure. */
 typedef struct table_Bucket
 {
+    const void *key, *value;
     struct table_Bucket *next;
-    const void *key;
-    const void *value;
     unsigned int hash;
 } table_Bucket;
 
@@ -105,8 +104,6 @@ HashTable* HashTable_new(unsigned int(*hash)(const void*),
     /* Note: Capacity must always be a power of 2. */
     table->buckets = mem_calloc(DEFAULT_INITIAL_CAPACITY, sizeof(table_Bucket*));
     table->capacity = DEFAULT_INITIAL_CAPACITY;
-
-    /* Function pointers. */
     table->hash = hash;
     table->equals = equals;
     table->toString = toString;
@@ -116,6 +113,7 @@ HashTable* HashTable_new(unsigned int(*hash)(const void*),
 
 /*
  * Returns the value of an entry that corresponds to the specified key.
+ * Returns NULL if the key is not found in the Table.
  * Ω(1), O(n)
  */
 void* table_get(const HashTable* const table, const void* const key)
@@ -246,17 +244,18 @@ HashTable* table_clone(const HashTable* const table)
         const void *value, *key = table_iter_next(iter, &value);
         table_put(copy, key, value);
     }
+    table_iter_destroy(iter);
 
     /* Unlock the data structure. */
     sync_read_end(table->rw_sync);
 
-    table_iter_destroy(iter);
     return copy;
 }
 
 /*
  * Inserts a key/value pair into the Table.
  * If the specified key already exists in the Table, then it's value is replaced with `value`.
+ * TODO: Update parameters and documentation to match dictionary.
  * Ω(1), O(n)
  */
 void table_put(HashTable* const table, const void* const key, const void* const value)

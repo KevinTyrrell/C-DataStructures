@@ -32,6 +32,7 @@ SOFTWARE.
 
 #define MEM_MSG_INVALID_BLOCK_SIZE "Memory block size was invalid!"
 #define MEM_MSG_INVALID_MEMORY "Memory blocks allocated does not match expected values for this operation!"
+#define MEM_MSG_BLOCKS_UNAVAILABLE "Not enough memory to allocate for this variable!"
 
 /* Track memory usage in order to make sure we free all allocated memory. */
 size_t MEM_CURRENT_ALLOCATIONS = 0, MEM_TOTAL_ALLOCATIONS = 0, MEM_BLOCKS_ALLOCATED = 0;
@@ -56,9 +57,9 @@ void* mem_malloc(const size_t size)
 }
 
 /*
- * Memory allocation function.
- * Use this function instead of `calloc`.
- * Updates memory usage variables to show memory leaks.
+ * Memory allocation replacement.
+ * This function should be used over `calloc`.
+ * Updates memory usage variables to detect memory leaks.
  * Θ(1)
  */
 void* mem_calloc(const size_t items, const size_t size)
@@ -76,9 +77,10 @@ void* mem_calloc(const size_t items, const size_t size)
 }
 
 /*
- * Memory allocation function.
- * Use this function instead of `realloc`.
- * Updates memory usage variables to show memory leaks.
+ * Memory reallocation replacement.
+ * This function should be used over `realloc`.
+ * Updates memory usage variables to detect memory leaks.
+ * The new/old size of the pointer being must be specified.
  * Θ(1)
  */
 void* mem_realloc(void *const ptr, const size_t oldSize, const size_t newSize)
@@ -96,10 +98,10 @@ void* mem_realloc(void *const ptr, const size_t oldSize, const size_t newSize)
 }
 
 /*
- * Memory de-allocation function.
- * Use this function instead of `free`.
- * Updates memory usage variables to show memory leaks.
- * size - Size of the pointer being freed.
+ * Memory de-allocation replacement.
+ * This function should be used over `free`.
+ * Updates memory usage variables to detect memory leaks.
+ * The size of the pointer being freed must be specified.
  * Θ(1)
  */
 void mem_free(void *const ptr, const size_t size)
@@ -123,8 +125,7 @@ void mem_free(void *const ptr, const size_t size)
  */
 void mem_status()
 {
-    const WORD stdColor = io_color(IO_LIGHT_TEAL);
-    printf("Active allocations %-5lu Blocks allocated: %-10lu Leakage: %.2f%%\n",
-           MEM_CURRENT_ALLOCATIONS, MEM_BLOCKS_ALLOCATED, 100.0 * MEM_CURRENT_ALLOCATIONS / MEM_TOTAL_ALLOCATIONS);
-    io_color(stdColor);
+    printf("Active allocations %-5u Blocks allocated: %-10u Leakage: %.2f%%\n",
+           MEM_CURRENT_ALLOCATIONS, MEM_BLOCKS_ALLOCATED,
+           100.0 * MEM_CURRENT_ALLOCATIONS / MEM_TOTAL_ALLOCATIONS);
 }
