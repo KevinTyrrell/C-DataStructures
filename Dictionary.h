@@ -56,26 +56,24 @@ Dictionary* Dictionary_new(int(*compare)(const void*, const void*),
 
 /* ~~~~~ Accessors ~~~~~ */
 
-/* Returns the value of an entry that corresponds to the specified key. */
+/* Returns the value of an mapping that corresponds to the specified key. */
 void* dict_get(const Dictionary* const dict, const void* const key);
-/* Returns the number of elements in the Dictionary. */
+/* Returns the number of mappings in the Dictionary. */
 size_t dict_size(const Dictionary* const dict);
 /* Returns true if the Dictionary is empty. */
 bool dict_empty(const Dictionary* const dict);
-/* Returns true if the Dictionary contains the specified key. */
+/* Returns true if the Dictionary contains a mapping with the specified key. */
 bool dict_contains(const Dictionary* const dict, const void* const key);
-/* Prints out the structure of the Dictionary to the console window. */
-void dict_print_tree(const Dictionary* const dict);
 /* Returns a shallow copy of the Dictionary. */
 Dictionary* dict_clone(const Dictionary* const dict);
 
 /* ~~~~~ Mutators ~~~~~ */
 
-/* Inserts a key/value pair into the Dictionary. */
+/* Inserts a mapping into the Dictionary. */
 void* dict_put(Dictionary *const dict, const void *const key, const void *const value);
-/* Removes a key/value pair from the Dictionary and returns true if the removal was successful. */
+/* Removes a mapping from the Dictionary whose key matches the specified key. */
 void* dict_remove(Dictionary *const dict, const void *const key);
-/* Removes all key/value pairs from the Dictionary. */
+/* Removes all mappings from the Dictionary. */
 void dict_clear(Dictionary* const dict);
 
 /* ~~~~~ De-constructors ~~~~~ */
