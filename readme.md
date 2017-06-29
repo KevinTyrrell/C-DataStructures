@@ -8,7 +8,7 @@ Robust and reliable implementations of common data structures. These were develo
 |Vector| Random Access, Deque, Stack, Queue|On Demand<br>Ω(n * log(n))|**compare** (optional, used for *sort*, *remove*, *contains*)<br>**toString** (optional, used for *print*)|Yes
 |LinkedList|Deque, Stack, Queue|On Demand<br>Θ(n * log(n))|**compare** (optional, used for *sort*)<br>**toString** (optional, used for *print*)|Yes
 |HashTable|Map, Set|No|**hash** (mandatory)<br>**equals** (mandatory)<br>**toString** (optional, used for *print*)|Yes
-|Dictionary|Map, Set|Yes|**compare** (mandatory)<br>**toString** (optional, used for *print*)|In Development
+|Dictionary|Map, Set|Yes|**compare** (mandatory)<br>**toString** (optional, used for *print*)|Yes
 
 
 
