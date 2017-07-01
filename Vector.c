@@ -561,29 +561,30 @@ void vect_grow_to(Vector* const vect, const size_t min_size)
     /* Lock the data structure to future readers/writers. */
     sync_write_start(vect->rw_sync);
 
-    io_assert(min_size > vect->capacity, IO_MSG_INVALID_SIZE);
-
-    /*
+    if (min_size > vect->capacity)
+    {
+        /*
      * Solve for the expanded capacity.
      * The Vector only expands in increments of base_capacity * 2^n.
      * Ex. `min_size` of 73 means expanded capacity of 80 if base_capacity is 10.
      */
-    const size_t expanded_capacity = DEFAULT_INITIAL_CAPACITY
-                                     * (unsigned int)math_pow(VECTOR_GROW_AMOUNT, 1 + (unsigned int)floor(
-            log((double)min_size / DEFAULT_INITIAL_CAPACITY) / log(VECTOR_GROW_AMOUNT)));
+        const size_t expanded_capacity = DEFAULT_INITIAL_CAPACITY
+                                         * (unsigned int) math_pow(VECTOR_GROW_AMOUNT, 1 + (unsigned int) floor(
+                log((double) min_size / DEFAULT_INITIAL_CAPACITY) / log(VECTOR_GROW_AMOUNT)));
 
-    /* Create a larger table and add the old table's data into it. */
-    const void** const expanded_table = mem_calloc(expanded_capacity, sizeof(void*));
-    for (unsigned int i = 0; i < vect->size; i++)
-        expanded_table[i] = vect_at(vect, i);
+        /* Create a larger table and add the old table's data into it. */
+        const void **const expanded_table = mem_calloc(expanded_capacity, sizeof(void *));
+        for (unsigned int i = 0; i < vect->size; i++)
+            expanded_table[i] = vect_at(vect, i);
 
-    /* Destroy the old table. */
-    mem_free(vect->table, vect->capacity * sizeof(void*));
-    /* Update the Vector's properties. */
-    vect->table = expanded_table;
-    vect->capacity = expanded_capacity;
-    vect->start = 0;
-    vect->end = !vect_empty(vect) ? vect->size - 1 : 0;
+        /* Destroy the old table. */
+        mem_free(vect->table, vect->capacity * sizeof(void *));
+        /* Update the Vector's properties. */
+        vect->table = expanded_table;
+        vect->capacity = expanded_capacity;
+        vect->start = 0;
+        vect->end = !vect_empty(vect) ? vect->size - 1 : 0;
+    }
 
     /* Unlock the data structure. */
     sync_write_end(vect->rw_sync);
