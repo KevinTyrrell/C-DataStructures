@@ -14,90 +14,6 @@ Robust and reliable implementations of common data structures. These were develo
 
 ## Example Uses:
 
-
-<details>
-  <summary>**Card implementation**</summary>
-  <p>
-  
-## *Card.h*
-```c
-#pragma once
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-
-enum card_suit { HEARTS, SPADES, DIAMONDS, CLUBS };
-enum card_face { ACE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING };
-char* suit_strings[] = { "Hearts", "Spades", "Diamonds", "Clubs" };
-char* face_strings[] = { "Ace", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King" };
-
-typedef struct
-{
-	enum card_face face;
-	enum card_suit suit;
-} Card;
-
-// Creates a Poker card.
-Card* card(enum card_face face, enum card_suit suit)
-{
-	Card *c = malloc(sizeof(Card));
-	if (c == NULL)
-	{
-		printf("Out of memory!\n");
-		exit(1);
-	}
-	c->face = face;
-	c->suit = suit;
-	return c;
-}
-
-// Outputs the Card as a String.
-char* toString(const void* v)
-{
-	static char buffer[25];
-	const Card *var = v;
-	sprintf(buffer, "%s%s%s", face_strings[var->face], " of ", suit_strings[var->suit]);
-	return buffer;
-}
-
-// ToString for Key/Value pairs.
-char* keyValueToString(const void *v1, const void *v2)
-{
-	static char buffer[30];
-	const int *value = v2;
-	sprintf(buffer, "<%s,%d>", toString(v1), *value);
-	return buffer;
-}
-
-// Compares two cards, returning -1, 0, or 1 depending on if a < b, a == b, or a > b
-int compare(const Card *v1, const Card *v2)
-{
-	const Card *a = v1, *b = v2;
-	if (a->suit != b->suit)
-		return a->suit < b->suit ? -1 : 1;
-	if (a->face != b->face)
-		return a->face < b->face ? -1 : 1;
-	return 0;
-}
-
-// Returns an integer representation of a Card.
-unsigned int hash(const void *v)
-{
-	const Card *c = v;
-	return (unsigned int)(10241 + 5124213 * c->face + c->suit);
-}
-
-// Check if two cards are equivalent.
-bool equals(const void *v1, const void *v2)
-{
-	return compare(v1, v2) == 0;
-}
-```
-</p></details>
-
-
-
 ### Vector
 ```c
 #include "C-DataStructures/Vector.h"
@@ -235,5 +151,64 @@ int main()
     // Deconstruct the table.
     table_destroy(table);
     return 0;
+}
+```
+
+### Dictionary
+```c
+#include <stdio.h>
+#include "C-DataStructures/Dictionary.h"
+
+int str_compare(const void *p1, const void *p2) { return strcmp(*(char**)p1, *(char**)p2); }
+char* str_toString(const void *p) { return *(char**)p; }
+char* int_toString(const void *p)
+{
+    static char buffer[25];
+    sprintf(buffer, "%d", *(int*)p);
+    return buffer;
+}
+char* kv_toString(const void *k, const void *v)
+{
+    static char buffer[25];
+    sprintf(buffer, "<%s,%s>", str_toString(k), int_toString(v));
+    return buffer;
+}
+
+void main()
+{
+    /* Dictionary constructor. */
+    Dictionary *dict = Dictionary_new(&str_compare, &kv_toString);
+
+    /* Add elements to the Dictionary. */
+    char *name1 = "Jake", *name2 = "Max", *name3 = "Mark", *name4 = "John", *name5 = "Adam";
+    int age1 = 16, age2 = 31, age3 = 24, age4 = 56, age5 = 24;
+    dict_put(dict, &name1, &age1);
+    dict_put(dict, &name2, &age2);
+    dict_put(dict, &name3, &age3);
+    dict_put(dict, &name4, &age4);
+    dict_put(dict, &name5, &age5);
+
+    dict_print(dict);
+
+    char *name = "John";
+    if (dict_contains(dict, &name))
+        printf("%s's age is %d.\n", name, *(int*)dict_get(dict, &name));
+
+    dict_remove(dict, &name);
+    printf("There are %u mappings inside the Dictionary.\n", dict_size(dict));
+
+    /* Loop through all mappings inside the Dictionary. */
+    dict_Iterator* const iter = dict_iter(dict, PRE_ORDER);
+    while (dict_iter_has_next(iter))
+    {
+        void *value;
+        void *key = dict_iter_next(iter, &value);
+        if (*(int*)value == 24)
+            printf("24 year old located: %s.\n", *(char**)key);
+    }
+    dict_iter_destroy(iter);
+    
+    /* Destroy the Dictionary when finished. */
+    dict_destroy(dict);
 }
 ```

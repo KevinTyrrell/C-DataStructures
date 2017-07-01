@@ -198,6 +198,33 @@ bool dict_contains(const Dictionary* const dict, const void* const key)
 }
 
 /*
+ * Prints out the contents of the Dictionary to the console window.
+ * Θ(n)
+ */
+void dict_print(const Dictionary* const dict)
+{
+    io_assert(dict != NULL, IO_MSG_NULL_PTR);
+
+    /* Lock the data structure to future writers. */
+    sync_read_start(dict->rw_sync);
+
+    printf("%c", '[');
+    dict_Iterator* const iter = dict_iter(dict, PRE_ORDER);
+    while (dict_iter_has_next(iter))
+    {
+        void *value;
+        const void *key = dict_iter_next(iter, &value);
+        printf("%s", dict->toString(key, value));
+        if (dict_iter_has_next(iter)) printf(", ");
+    }
+    printf("]\n");
+    dict_iter_destroy(iter);
+
+    /* Unlock the data structure. */
+    sync_read_end(dict->rw_sync);
+}
+
+/*
  * Returns a shallow copy of the Dictionary.
  * Θ(n)
  */

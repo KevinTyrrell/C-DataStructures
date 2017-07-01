@@ -56,13 +56,13 @@ HashTable* HashTable_new(unsigned int(*hash)(const void*),
 
 /* ~~~~~ Accessors ~~~~~ */
 
-/* Returns the value of an entry that corresponds to the specified key. */
+/* Returns the value of a mapping whose key matches the specified key. */
 void* table_get(const HashTable* const table, const void* const key);
-/* Returns the number of elements in the Table. */
+/* Returns the number of mappings in the Table. */
 size_t table_size(const HashTable* const table);
 /* Returns true if the Table is empty. */
 bool table_empty(const HashTable* const table);
-/* Returns true if the Table contains the specified key. */
+/* Returns true if the Dictionary contains a mapping with the specified key. */
 bool table_contains(const HashTable* const table, const void* const key);
 /* Prints out the contents of the Table to the console window. */
 void table_print(const HashTable* const table);
@@ -71,8 +71,8 @@ HashTable* table_clone(const HashTable* const table);
 
 /* ~~~~~ Mutators ~~~~~ */
 
-/* Inserts a key/value pair into the Table. */
-void table_put(HashTable* const table, const void* const key, const void* const value);
+/* Inserts a mapping into the Table. */
+void* table_put(HashTable* const table, const void* const key, const void* const value);
 /* Removes a key/value pair from the Table and returns true if the removal was successful. */
 bool table_remove(HashTable* const table, const void* const key);
 /* Grows the underlying array to be able to store at least `min_size` elements. */
@@ -97,7 +97,7 @@ void table_destroy(HashTable* const table);
 table_Iterator* table_iter(const HashTable* const table);
 
 /* Returns the iterator's current key/value pair and advances it forward. */
-void* table_iter_next(table_Iterator* const iter, const void** const value);
+void* table_iter_next(table_Iterator* const iter, void **value);
 /* Returns true if the iterator has a next key/value pair. */
 bool table_iter_has_next(const table_Iterator* const iter);
 /* De-constructor function. */

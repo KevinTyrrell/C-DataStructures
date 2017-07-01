@@ -56,7 +56,7 @@ Dictionary* Dictionary_new(int(*compare)(const void*, const void*),
 
 /* ~~~~~ Accessors ~~~~~ */
 
-/* Returns the value of an mapping that corresponds to the specified key. */
+/* Returns the value of a mapping whose key matches the specified key. */
 void* dict_get(const Dictionary* const dict, const void* const key);
 /* Returns the number of mappings in the Dictionary. */
 size_t dict_size(const Dictionary* const dict);
@@ -64,6 +64,8 @@ size_t dict_size(const Dictionary* const dict);
 bool dict_empty(const Dictionary* const dict);
 /* Returns true if the Dictionary contains a mapping with the specified key. */
 bool dict_contains(const Dictionary* const dict, const void* const key);
+/* Prints out the contents of the Dictionary to the console window. */
+void dict_print(const Dictionary* const dict);
 /* Returns a shallow copy of the Dictionary. */
 Dictionary* dict_clone(const Dictionary* const dict);
 

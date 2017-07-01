@@ -112,8 +112,8 @@ HashTable* HashTable_new(unsigned int(*hash)(const void*),
 }
 
 /*
- * Returns the value of an entry that corresponds to the specified key.
- * Returns NULL if the key is not found in the Table.
+ * Returns the value of a mapping whose key matches the specified key.
+ * Returns NULL if no such mapping exists.
  * Ω(1), O(n)
  */
 void* table_get(const HashTable* const table, const void* const key)
@@ -137,7 +137,7 @@ void* table_get(const HashTable* const table, const void* const key)
 }
 
 /*
- * Returns the number of elements in the Table.
+ * Returns the number of mappings in the Table.
  * Θ(1)
  */
 size_t table_size(const HashTable* const table)
@@ -175,7 +175,7 @@ bool table_empty(const HashTable* const table)
 }
 
 /*
- * Returns true if the Table contains the specified key.
+ * Returns true if the Dictionary contains a mapping with the specified key.
  * Ω(1), O(n)
  */
 bool table_contains(const HashTable* const table, const void* const key)
@@ -210,17 +210,15 @@ void table_print(const HashTable* const table)
     printf("%c", '[');
     while (table_iter_has_next(iter))
     {
-        const void* value;
+        void* value;
         printf("%s", table->toString(table_iter_next(iter, &value), value));
         if (table_iter_has_next(iter)) printf(", ");
     }
-
     printf("]\n");
+    table_iter_destroy(iter);
 
     /* Unlock the data structure. */
     sync_read_end(table->rw_sync);
-
-    table_iter_destroy(iter);
 }
 
 /*
@@ -241,7 +239,7 @@ HashTable* table_clone(const HashTable* const table)
     table_Iterator* const iter = table_iter(table);
     while (table_iter_has_next(iter))
     {
-        const void *value, *key = table_iter_next(iter, &value);
+        void *value, *key = table_iter_next(iter, &value);
         table_put(copy, key, value);
     }
     table_iter_destroy(iter);
@@ -253,18 +251,18 @@ HashTable* table_clone(const HashTable* const table)
 }
 
 /*
- * Inserts a key/value pair into the Table.
- * If the specified key already exists in the Table, then it's value is replaced with `value`.
- * TODO: Update parameters and documentation to match dictionary.
+ * Inserts a mapping into the Table.
+ * If the Table already contained a mapping for the key, the old value is replaced.
+ * Returns the replaced value or NULL if this is a new mapping.
  * Ω(1), O(n)
  */
-void table_put(HashTable* const table, const void* const key, const void* const value)
+void* table_put(HashTable* const table, const void* const key, const void* const value)
 {
     io_assert(table != NULL, IO_MSG_NULL_PTR);
     io_assert(key != NULL, IO_MSG_NULL_PTR);
     io_assert(value != NULL, IO_MSG_NULL_PTR);
 
-    bool already_exists;
+    const void *replaced = NULL;
     const unsigned int hash = table->hash(key);
 
     /* Lock the data structure to future readers/writers. */
@@ -274,6 +272,7 @@ void table_put(HashTable* const table, const void* const key, const void* const 
     if (table_design_load(table))
         table_grow(table, table->capacity * GROW_FACTOR);
 
+    bool already_exists;
     table_Bucket* const located = table_search(table, key, hash, &already_exists);
     if (!already_exists)
     {
@@ -287,10 +286,16 @@ void table_put(HashTable* const table, const void* const key, const void* const 
         table->size++;
     }
     /* Duplicate key entered; update the value. */
-    else located->value = value;
+    else
+    {
+        replaced = located->value;
+        located->value = value;
+    }
 
     /* Unlock the data structure. */
     sync_write_end(table->rw_sync);
+
+    return (void*)replaced;
 }
 
 /*
@@ -439,13 +444,13 @@ table_Iterator* table_iter(const HashTable* const table)
  * The key will be returned and the value will be assigned to the data of the parameter.
  * Ω(1), O(n)
  */
-void* table_iter_next(table_Iterator* const iter, const void** const value)
+void* table_iter_next(table_Iterator* const iter, void **value)
 {
     io_assert(iter != NULL, IO_MSG_NULL_PTR);
     io_assert(table_iter_has_next(iter), IO_MSG_OUT_OF_BOUNDS);
 
     const table_Bucket* const current = table_iter_next_bucket(iter);
-    *value = current->value;
+    *value = (void*)current->value;
 
     return (void*)current->key;
 }
@@ -513,7 +518,8 @@ table_Bucket* table_iter_next_bucket(table_Iterator* const iter)
 
 /*
  * Returns a bucket in the Table whose hash matches the specified hash.
- * If no such bucket exists, `found`'s data will be set to false.
+ * If no such bucket exists, either the closest bucket will be returned or NULL.
+ * The parameter `found` will be set to true if an exact match is located.
  * Ω(1), O(n)
  */
 table_Bucket* table_search(const HashTable* const table, const void* const key,
@@ -524,13 +530,12 @@ table_Bucket* table_search(const HashTable* const table, const void* const key,
     io_assert(found != NULL, IO_MSG_NULL_PTR);
 
     *found = false;
-    const unsigned int index = MODULUS(hash, table->capacity);
-    const table_Bucket *current = table->buckets[index];
+    const table_Bucket *current = table->buckets[MODULUS(hash, table->capacity)];
+
     while (current != NULL)
     {
         // TODO: It may be possible to refactor this code.
-        if (table_Bucket_match(current, key, hash, table->equals))
-            *found = true;
+        *found = table_Bucket_match(current, key, hash, table->equals);
         if (*found || current->next == NULL) break;
         current = current->next;
     }
