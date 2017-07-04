@@ -3,7 +3,7 @@
  * File: HashTable.c
  * Date: Aug 18, 2016
  * Name: Kevin Tyrrell
- * Version: 4.0.0
+ * Version: 4.1.0
  */
 
 /*
@@ -38,10 +38,6 @@ SOFTWARE.
 
 /* Modulus of (a, b) where b is a positive base 2 integer. */
 #define MODULUS(operand, base_2_num) (operand & (base_2_num - 1))
-#define LOG_BX(num, base) (log((double)num)/log((double)base))
-/* v = A_B2(num) where v >= num >= DIC and is a power of GF and factor of DIC. */
-#define ATLEAST_BASE_2(num) ((unsigned int)pow((double)GROW_FACTOR,\
-    ceil(max(LOG_BX(num, GROW_FACTOR), sqrt((double)DEFAULT_INITIAL_CAPACITY)))))
 
 /* HashTable structure. */
 struct HashTable
@@ -235,7 +231,7 @@ HashTable* table_clone(const HashTable* const table)
     sync_read_start(table->rw_sync);
 
     /* The new table needs to have the same capacity as the old one. */
-    table_grow(copy, table->capacity);
+    table_resize(copy, table->capacity);
     table_Iterator* const iter = table_iter(table);
     while (table_iter_has_next(iter))
     {
@@ -270,7 +266,7 @@ void* table_put(HashTable* const table, const void* const key, const void* const
 
     /* Expand the Table automatically if we are at design load. */
     if (table_design_load(table))
-        table_grow(table, table->capacity * GROW_FACTOR);
+        table_resize(table, table->capacity * GROW_FACTOR);
 
     bool already_exists;
     table_Bucket* const located = table_search(table, key, hash, &already_exists);
@@ -341,28 +337,35 @@ bool table_remove(HashTable* const table, const void* const key)
 }
 
 /*
- * Grows the underlying array to be able to store at least `min_size` elements.
- * The Table's new capacity will be the smallest power of 2 which is >= `min_size`.
- * The Table's capacity will always be a factor of DEFAULT_INITIAL_CAPACITY.
- * If the new capacity is not larger than the current capacity, no changes are made.
+ * Changes the Table's capacity to accommodate at least the specified number of mappings.
+ * This function can be used both to grow and shrink the Table.
+ * Specified sizes which are less than the amount of mappings are ignored.
+ * The final capacity will always be of the form x * y^n,
+ * where x is the default initial capacity, y is the grow factor.
  * Ω(1), O(n)
  */
-void table_grow(HashTable* const table, const size_t min_size)
+void table_resize(HashTable *const table, const size_t min_size)
 {
     io_assert(table != NULL, IO_MSG_NULL_PTR);
-
-    const size_t expanded_capacity = ATLEAST_BASE_2(min_size);
 
     /* Lock the data structure to future readers/writers. */
     sync_write_start(table->rw_sync);
 
+    /* Capacities must adhere to the load factor, grow factor, and default initial capacity. */
+    size_t desired_capacity = (size_t)(min_size / (double)LOAD_FACTOR);
+    if (desired_capacity > DEFAULT_INITIAL_CAPACITY)
+        /* Capacity becomes the nth power of the grow factor times the default initial capacity. */
+        desired_capacity = DEFAULT_INITIAL_CAPACITY * math_min_power_gt(
+                GROW_FACTOR, MATH_DIV_CEIL(desired_capacity, DEFAULT_INITIAL_CAPACITY));
+    else desired_capacity = DEFAULT_INITIAL_CAPACITY;
+
     /* No need to expand if the table if there is no size improvement. */
-    if (expanded_capacity > table->capacity)
+    if (desired_capacity > table->size)
     {
         /* Create a temporary Table on the Stack. */
         HashTable expanded =
         {
-            mem_calloc(expanded_capacity, sizeof(table_Bucket*)), expanded_capacity, 0,
+            mem_calloc(desired_capacity, sizeof(table_Bucket*)), desired_capacity, 0,
             table->rw_sync, table->equals, table->hash, table->toString
         };
 
@@ -379,7 +382,7 @@ void table_grow(HashTable* const table, const size_t min_size)
         /* Destroy the old array and replace it with the expanded one. */
         mem_free(table->buckets, table->capacity * sizeof(table_Bucket*));
         table->buckets = expanded.buckets;
-        table->capacity = expanded_capacity;
+        table->capacity = desired_capacity;
         /* The expanded table was made on the stack, so no need to destroy it. */
     }
 

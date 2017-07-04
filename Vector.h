@@ -3,7 +3,7 @@
  * File: Vector.h
  * Date: Feb 27, 2017
  * Name: Kevin Tyrrell
- * Version: 4.0.0
+ * Version: 4.1.0
  */
 
 /*
@@ -34,8 +34,6 @@ SOFTWARE.
 #include "tools/Math.h"
 #include "tools/Synchronize.h"
 #include "C-Random/Random.h"
-
-#include <math.h>
 
 /* Anonymous structures. */
 typedef struct Vector Vector;
@@ -94,8 +92,8 @@ void vect_pop_back(Vector* const vect);
 void vect_pop_front(Vector* const vect);
 /* Appends all data from another Vector to the end of this Vector. */
 void vect_append(Vector* const vect, const Vector* const other);
-/* Grows the underlying array to be able to store at least `min_size` elements. */
-void vect_grow_to(Vector* const vect, const size_t min_size);
+/* Changes the Vector's capacity to accommodate at least the specified number of elements. */
+void vect_resize(Vector *const vect, const size_t min_size);
 /* Removes all elements from the Vector while preserving the capacity. */
 void vect_clear(Vector* const vect);
 /* Sorts elements inside the Vector in ascending order. */

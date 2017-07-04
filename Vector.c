@@ -3,7 +3,7 @@
  * File: Vector.c
  * Date: Feb 27, 2017
  * Name: Kevin Tyrrell
- * Version: 4.0.0
+ * Version: 4.1.0
  */
 
 /*
@@ -32,7 +32,7 @@ SOFTWARE.
 
 /* Array capacity components. */
 #define DEFAULT_INITIAL_CAPACITY 10
-#define VECTOR_GROW_AMOUNT 2
+#define GROW_FACTOR 2
 
 #define INDEX_RIGHT(index, capacity) (index == capacity - 1) ? 0 : index + 1
 #define INDEX_LEFT(index, capacity) (index == 0) ? capacity - 1 : index - 1
@@ -64,7 +64,6 @@ struct vect_Iterator
 
 /* Local functions. */
 static bool vect_full(const Vector* const vect);
-static void vect_grow(Vector* const vect);
 static void vect_swap(const Vector* const vect, const unsigned int i, const unsigned int h);
 static void vect_pswap(const void **const v1, const void **const v2);
 static void vect_merge_sort(const Vector* const vect, const unsigned int start, const size_t size);
@@ -336,7 +335,7 @@ void vect_insert(Vector* const vect, const unsigned int index, const void* const
     else
     {
         if (vect_full(vect))
-            vect_grow(vect);
+            vect_resize(vect, vect->size + 1);
 
         /* Check if shifting right is quicker. */
         if (vect->size - 1 - index <= index)
@@ -435,7 +434,7 @@ void vect_push_back(Vector * const vect, const void* const data)
 
     /* Check if we need to increase the array's capacity. */
     if (vect_full(vect))
-        vect_grow(vect);
+        vect_resize(vect, vect->size + 1);
 
     /* When Vector has one or less element(s), start and end must point to the same index. */
     if (!vect_empty(vect))
@@ -463,7 +462,7 @@ void vect_push_front(Vector* const vect, const void* const data)
 
     /* Check if we need to increase the array's capacity. */
     if (vect_full(vect))
-        vect_grow(vect);
+        vect_resize(vect, vect->size + 1);
 
     /* When Vector has one or less element(s), start and end must point to the same index. */
     if (!vect_empty(vect))
@@ -535,7 +534,7 @@ void vect_append(Vector* const vect, const Vector* const other)
 
     const size_t combined = vect->size + other->size;
     if (vect->capacity < combined)
-        vect_grow_to(vect, combined);
+        vect_resize(vect, combined);
 
     vect_Iterator* const iter = vect_iter(other, 0);
     while (vect_iter_has_next(iter))
@@ -549,31 +548,29 @@ void vect_append(Vector* const vect, const Vector* const other)
 }
 
 /*
- * Grows the underlying array to be able to store at least `min_size` elements.
- * The Vector's capacity will always be of the form `capacity = 10 * 2^n`
- * // TODO: Vector with 52 elements grew to 160. Investigate.
- * Θ(n)
+ * Changes the Vector's capacity to accommodate at least the specified number of elements.
+ * This function can be used both to grow and shrink the Vector.
+ * Specified sizes which are less than the amount of elements are ignored.
+ * The final capacity will always be of the form x * y^n,
+ * where x is the default initial capacity, y is the grow factor.
+ * Ω(1), O(n)
  */
-void vect_grow_to(Vector* const vect, const size_t min_size)
+void vect_resize(Vector *const vect, const size_t min_size)
 {
     io_assert(vect != NULL, IO_MSG_NULL_PTR);
 
     /* Lock the data structure to future readers/writers. */
     sync_write_start(vect->rw_sync);
 
-    if (min_size > vect->capacity)
-    {
-        /*
-     * Solve for the expanded capacity.
-     * The Vector only expands in increments of base_capacity * 2^n.
-     * Ex. `min_size` of 73 means expanded capacity of 80 if base_capacity is 10.
-     */
-        const size_t expanded_capacity = DEFAULT_INITIAL_CAPACITY
-                                         * (unsigned int) math_pow(VECTOR_GROW_AMOUNT, 1 + (unsigned int) floor(
-                log((double) min_size / DEFAULT_INITIAL_CAPACITY) / log(VECTOR_GROW_AMOUNT)));
+    size_t desired_capacity = DEFAULT_INITIAL_CAPACITY;
+    if (min_size > DEFAULT_INITIAL_CAPACITY)
+        /* Capacity becomes the nth power of the grow factor times the default initial capacity. */
+        desired_capacity *= math_min_power_gt(GROW_FACTOR, MATH_DIV_CEIL(min_size, DEFAULT_INITIAL_CAPACITY));
 
+    if (desired_capacity >= vect->size)
+    {
         /* Create a larger table and add the old table's data into it. */
-        const void **const expanded_table = mem_calloc(expanded_capacity, sizeof(void *));
+        const void **const expanded_table = mem_calloc(desired_capacity, sizeof(void *));
         for (unsigned int i = 0; i < vect->size; i++)
             expanded_table[i] = vect_at(vect, i);
 
@@ -581,7 +578,7 @@ void vect_grow_to(Vector* const vect, const size_t min_size)
         mem_free(vect->table, vect->capacity * sizeof(void *));
         /* Update the Vector's properties. */
         vect->table = expanded_table;
-        vect->capacity = expanded_capacity;
+        vect->capacity = desired_capacity;
         vect->start = 0;
         vect->end = !vect_empty(vect) ? vect->size - 1 : 0;
     }
@@ -766,16 +763,6 @@ void vect_iter_destroy(vect_Iterator* const iter)
 bool vect_full(const Vector* const vect)
 {
     return vect->size == vect->capacity;
-}
-
-/*
- * Grows the underlying array by a factor of `VECTOR_GROW_AMOUNT`.
- * Θ(n)
- */
-void vect_grow(Vector* const vect)
-{
-    /* Expand the underlying array by a set amount. */
-    vect_grow_to(vect, vect->capacity * VECTOR_GROW_AMOUNT);
 }
 
 /*

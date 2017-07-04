@@ -3,7 +3,7 @@
  * File: Math.c
  * Date: Jun 09, 2017
  * Name: Kevin Tyrrell
- * Version: 1.1.0
+ * Version: 1.2.0
  */
 
 /*
@@ -58,4 +58,15 @@ unsigned long long math_pow(unsigned long long base, unsigned int exp)
 unsigned int math_max(const unsigned int a, const unsigned int b)
 {
     return (a > b) ? a : b;
+}
+
+/*
+ * Returns the smallest power of the base which is greater than or equal to the specified value.
+ * Ex. base=4, value=111 -> return=256
+ * Θ(1)
+ */
+unsigned int math_min_power_gt(const unsigned int base, const unsigned int greater_than)
+{
+    if (greater_than <= base) return base;
+    return (unsigned int)math_pow(base, (unsigned int)ceil(log((double)greater_than) / log((double)base)));
 }

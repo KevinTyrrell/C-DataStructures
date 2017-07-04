@@ -3,7 +3,7 @@
  * File: Math.h
  * Date: Jun 09, 2017
  * Name: Kevin Tyrrell
- * Version: 1.1.0
+ * Version: 1.2.0
  */
 
 /*
@@ -30,7 +30,13 @@ SOFTWARE.
 
 #pragma once
 
+#include <math.h>
+
+#define MATH_DIV_CEIL(dividend, divisor) (1 + ((dividend - 1) / divisor))
+
 /* Returns the base to the power of the exponent. */
 unsigned long long math_pow(unsigned long long base, unsigned int exp);
 /* Returns the max of two integers. */
 unsigned int math_max(const unsigned int a, const unsigned int b);
+/* Returns the smallest power of the base which is greater than or equal to the specified value. */
+unsigned int math_min_power_gt(const unsigned int base, const unsigned int greater_than);

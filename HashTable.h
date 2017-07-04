@@ -3,7 +3,7 @@
  * File: HashTable.h
  * Date: Aug 18, 2016
  * Name: Kevin Tyrrell
- * Version: 4.0.0
+ * Version: 4.1.0
  */
 
 /*
@@ -32,6 +32,7 @@ SOFTWARE.
 
 #include "tools/Memory.h"
 #include "tools/Synchronize.h"
+#include "tools/Math.h"
 
 /* Anonymous structures. */
 typedef struct HashTable HashTable;
@@ -75,8 +76,8 @@ HashTable* table_clone(const HashTable* const table);
 void* table_put(HashTable* const table, const void* const key, const void* const value);
 /* Removes a key/value pair from the Table and returns true if the removal was successful. */
 bool table_remove(HashTable* const table, const void* const key);
-/* Grows the underlying array to be able to store at least `min_size` elements. */
-void table_grow(HashTable *const table, const size_t min_size);
+/* Changes the Table's capacity to accommodate at least the specified number of mappings. */
+void table_resize(HashTable *const table, const size_t min_size);
 /* Removes all key/value pairs from the Table while preserving the capacity. */
 void table_clear(HashTable* const table);
 
