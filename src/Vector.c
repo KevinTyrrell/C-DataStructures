@@ -1,12 +1,5 @@
 
 /*
- * File: Vector.c
- * Date: Feb 27, 2017
- * Name: Kevin Tyrrell
- * Version: 4.1.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,7 +21,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "Vector.h"
+/*
+ * File Name:       Vector.c
+ * File Author:     Kevin Tyrrell
+ * Date Created:    02/27/2017
+ */
+
+#include "../include/Vector.h"
 
 /* Array capacity components. */
 #define DEFAULT_INITIAL_CAPACITY 10

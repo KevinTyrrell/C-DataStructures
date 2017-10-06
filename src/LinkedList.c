@@ -1,12 +1,5 @@
 
 /*
- * File: LinkedList.c
- * Date: Jul 21, 2016
- * Name: Kevin Tyrrell
- * Version: 4.0.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,7 +21,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "LinkedList.h"
+/*
+ * File Name:       LinkedList.c
+ * File Author:     Kevin Tyrrell
+ * Date Created:    07/21/2016
+ */
+
+#include "../include/LinkedList.h"
 
 /* Node structure. */
 typedef struct list_Node

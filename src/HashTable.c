@@ -1,12 +1,5 @@
 
 /*
- * File: HashTable.c
- * Date: Aug 18, 2016
- * Name: Kevin Tyrrell
- * Version: 4.1.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,7 +21,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "HashTable.h"
+/*
+ * File Name:       HashTable.c
+ * File Author:     Kevin Tyrrell
+ * Date Created:    08/18/2016
+ */
+
+#include "../include/HashTable.h"
 #include <math.h>
 
 /* Array capacity components. */

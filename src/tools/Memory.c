@@ -1,12 +1,5 @@
 
 /*
- * File: Memory.c
- * Date: Jun 01, 2017
- * Name: Kevin Tyrrell
- * Version: 2.0.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,6 +20,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+
+/*
+ * File Name:       Memory.c
+ * File Author:     Kevin Tyrrell
+ * Date Created:    06/01/2017
+ */
 
 #include "Memory.h"
 

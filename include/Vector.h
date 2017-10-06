@@ -1,12 +1,5 @@
 
 /*
- * File: Vector.h
- * Date: Feb 27, 2017
- * Name: Kevin Tyrrell
- * Version: 4.1.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,11 +21,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/*
+ * File Name:       Vector.h
+ * File Author:     Kevin Tyrrell
+ * Date Created:    02/27/2017
+ */
+
 #pragma once
 
-#include "tools/Memory.h"
-#include "tools/Math.h"
-#include "tools/Synchronize.h"
+#include "../tools/Memory.h"
+#include "../tools/Math.h"
+#include "../tools/Synchronize.h"
 #include "C-Random/Random.h"
 
 /* Anonymous structures. */

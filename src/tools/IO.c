@@ -1,12 +1,5 @@
 
 /*
- * File: Math.c
- * Date: Jun 09, 2017
- * Name: Kevin Tyrrell
- * Version: 1.2.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,45 +21,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "Math.h"
-
 /*
- * Returns the base to the power of the exponent.
- * Integer-based power function.
- * Θ(n)
+ * File Name:       IO.c
+ * File Author:     Kevin Tyrrell
+ * Date Created:    02/01/2017
  */
-unsigned long long math_pow(unsigned long long base, unsigned int exp)
-{
-    unsigned long long result = 1;
 
-    while (exp > 0)
-    {
-        /* If the exponent is odd. */
-        if (exp & 1 != 0)
-            result *= base;
-        exp >>= 1;
-        base *= base;
-    }
+#include "IO.h"
 
-    return result;
-}
+#define IO_TIMESTAMP_FORMAT "%s%d/%s%d/%d %s%d:%s%d:%s%d"
+#define IO_CONVERT_YEAR(year) (year + 1900)
+#define IO_LEADING_ZERO(value) (value < 10 ? "0" : "")
 
 /*
- * Returns the max of two integers.
+ * Returns the current system timestamp in String form.
+ * Return value is replaced if multiple timestamp calls are made.
+ * Used for testing purposes.
  * Θ(1)
  */
-unsigned int math_max(const unsigned int a, const unsigned int b)
+char* io_timestamp()
 {
-    return (a > b) ? a : b;
-}
+    /* Get the system time, parse it into month/day/year. */
+    const time_t t = time(NULL);
+    const struct tm time = *localtime(&t);
 
-/*
- * Returns the smallest power of the base which is greater than or equal to the specified value.
- * Ex. base=4, value=111 -> return=256
- * Θ(1)
- */
-unsigned int math_min_power_gt(const unsigned int base, const unsigned int greater_than)
-{
-    if (greater_than <= base) return base;
-    return (unsigned int)math_pow(base, (unsigned int)ceil(log((double)greater_than) / log((double)base)));
+    /* Concatenate the month, day, year, hour, minute, and second with leading zeroes. */
+    static char buffer[20];
+    sprintf(buffer, IO_TIMESTAMP_FORMAT, IO_LEADING_ZERO(time.tm_mon + 1), time.tm_mon + 1,
+            IO_LEADING_ZERO(time.tm_mday), time.tm_mday, IO_CONVERT_YEAR(time.tm_year),
+            IO_LEADING_ZERO(time.tm_hour), time.tm_hour, IO_LEADING_ZERO(time.tm_min),
+            time.tm_min, IO_LEADING_ZERO(time.tm_sec), time.tm_sec);
+
+    return buffer;
 }

@@ -1,12 +1,5 @@
 
 /*
- * File: LinkedList.h
- * Date: Jul 21, 2016
- * Name: Kevin Tyrrell
- * Version: 4.0.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,10 +21,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/*
+ * File Name:       LinkedList.h
+ * File Author:     Kevin Tyrrell
+ * Date Created:    07/21/2016
+ */
+
 #pragma once
 
-#include "tools/Memory.h"
-#include "tools/Synchronize.h"
+#include "../tools/Memory.h"
+#include "../tools/Synchronize.h"
 #include "C-Random/Random.h"
 
 /* Anonymous structures. */

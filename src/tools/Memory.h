@@ -1,12 +1,5 @@
 
 /*
- * File: IO.c
- * Date: Jun 01, 2017
- * Name: Kevin Tyrrell
- * Version: 2.0.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,30 +21,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/*
+ * File Name:       Memory.h
+ * File Author:     Kevin Tyrrell
+ * Date Created:    06/01/2017
+ */
+
+#pragma once
+
 #include "IO.h"
 
-#define IO_TIMESTAMP_FORMAT "%s%d/%s%d/%d %s%d:%s%d:%s%d"
-#define IO_CONVERT_YEAR(year) (year + 1900)
-#define IO_LEADING_ZERO(value) (value < 10 ? "0" : "")
+#include <stdlib.h>
 
-/*
- * Returns the current system timestamp in String form.
- * Return value is replaced if multiple timestamp calls are made.
- * Used for testing purposes.
- * Θ(1)
- */
-char* io_timestamp()
-{
-    /* Get the system time, parse it into month/day/year. */
-    const time_t t = time(NULL);
-    const struct tm time = *localtime(&t);
+/* ~~~~~ Memory Management ~~~~~ */
 
-    /* Concatenate the month, day, year, hour, minute, and second with leading zeroes. */
-    static char buffer[20];
-    sprintf(buffer, IO_TIMESTAMP_FORMAT, IO_LEADING_ZERO(time.tm_mon + 1), time.tm_mon + 1,
-            IO_LEADING_ZERO(time.tm_mday), time.tm_mday, IO_CONVERT_YEAR(time.tm_year),
-            IO_LEADING_ZERO(time.tm_hour), time.tm_hour, IO_LEADING_ZERO(time.tm_min),
-            time.tm_min, IO_LEADING_ZERO(time.tm_sec), time.tm_sec);
-
-    return buffer;
-}
+/* Memory allocation function. */
+void* mem_malloc(const size_t size);
+/* Memory allocation function.*/
+void* mem_calloc(const size_t items, const size_t size);
+/* Memory reallocation function. */
+void* mem_realloc(void *const ptr, const size_t oldSize, const size_t newSize);
+/* Memory de-allocation function. */
+void mem_free(void *const ptr, const size_t size);
+/* Prints out the status of the program's memory management. */
+void mem_status();

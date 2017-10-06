@@ -1,12 +1,5 @@
 
 /*
- * File: Dictionary.h
- * Date: Sep 01, 2016
- * Name: Kevin Tyrrell
- * Version: 4.0.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,11 +21,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/*
+ * File Name:       Dictionary.h
+ * File Author:     Kevin Tyrrell
+ * Date Created:    09/01/2016
+ */
+
 #pragma once
 
-#include "tools/Memory.h"
-#include "tools/Synchronize.h"
-#include "tools/Math.h"
+#include "../tools/Memory.h"
+#include "../tools/Synchronize.h"
+#include "../tools/Math.h"
 #include "Vector.h"
 
 /* Anonymous structures. */

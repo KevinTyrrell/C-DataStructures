@@ -1,12 +1,5 @@
 
 /*
- * File: Synchronize.h
- * Date: Jun 01, 2017
- * Name: Kevin Tyrrell
- * Version: 3.0.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,32 +21,41 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/*
+ * File Name:       Stopwatch.h
+ * File Author:     Kevin Tyrrell
+ * Date Created:    03/07/2017
+ */
+
 #pragma once
 
 #include "Memory.h"
 
-#include <windows.h>
-#include <stdbool.h>
-#include <string.h>
+#include <time.h>
 
-/* Anonymous structure. */
-typedef struct ReadWriteSync ReadWriteSync;
+/* Private structure. */
+typedef struct Stopwatch Stopwatch;
 
 /* ~~~~~ Constructors ~~~~~ */
 
-ReadWriteSync* ReadWriteSync_new();
+struct Stopwatch* Stopwatch_new();
+
+/* ~~~~~ Accessors ~~~~~ */
+
+/* Returns the amount of time clocked by the watch in milliseconds. */
+clock_t sw_elapsed(const Stopwatch* const sw);
+/* Returns the difference between two stopwatches in milliseconds. */
+clock_t sw_difference(const Stopwatch* const sw1, const Stopwatch* const sw2);
 
 /* ~~~~~ Mutators ~~~~~ */
 
-/* Adds a reader to the scheduler, forbidding any future writing. */
-void sync_read_start(ReadWriteSync* const rw_sync);
-/* Removes a reader that was previously reading. */
-void sync_read_end(ReadWriteSync* const rw_sync);
-/* Adds a writer to the scheduler, forbidding any future reading/writing. */
-void sync_write_start(ReadWriteSync* const rw_sync);
-/* Removes a writer that was previously writing. */
-void sync_write_end(ReadWriteSync* const rw_sync);
+/* Starts the stopwatch. */
+void sw_start(Stopwatch* const sw);
+/* Ends the stopwatch and returns the elapsed time in milliseconds. */
+clock_t sw_stop(Stopwatch* const sw);
+/* Resets the stopwatch to its original state. */
+void sw_reset(Stopwatch* const sw);
 
 /* ~~~~~ De-constructors ~~~~~ */
 
-void sync_destroy(ReadWriteSync* const rw_sync);
+void sw_destroy(Stopwatch* const sw);

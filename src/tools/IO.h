@@ -1,12 +1,5 @@
 
 /*
- * File: Memory.h
- * Date: Jun 01, 2017
- * Name: Kevin Tyrrell
- * Version: 2.0.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,21 +21,32 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/*
+ * File Name:       IO.c
+ * File Author:     Kevin Tyrrell
+ * Date Created:    02/01/2017
+ */
+
 #pragma once
 
-#include "IO.h"
+#include <stdio.h>
+#include <assert.h>
+#include <time.h>
 
-#include <stdlib.h>
+/* Assert Macro. */
+#define io_assert(condition, msg) assert(condition && msg)
 
-/* ~~~~~ Memory Management ~~~~~ */
+/* Error messages. */
+#define IO_MSG_OUT_OF_BOUNDS "Requested index was out of bounds!"
+#define IO_MSG_NULL_PTR "Unable to perform operation on NULL pointer!"
+#define IO_MSG_EMPTY "Unable to perform this operation while the container is empty!"
+#define IO_MSG_NOT_SUPPORTED "Unable to perform this operation with a NULL user-provided member function!"
+#define IO_MSG_INVALID_SIZE "Unable to perform this operation with an invalid sizing parameter!"
 
-/* Memory allocation function. */
-void* mem_malloc(const size_t size);
-/* Memory allocation function.*/
-void* mem_calloc(const size_t items, const size_t size);
-/* Memory reallocation function. */
-void* mem_realloc(void *const ptr, const size_t oldSize, const size_t newSize);
-/* Memory de-allocation function. */
-void mem_free(void *const ptr, const size_t size);
-/* Prints out the status of the program's memory management. */
-void mem_status();
+/* ~~~~~ Input/Output ~~~~~ */
+
+#define IO_CONSOLE_LOG(fmt, ...) do { fprintf(stderr, "%s: ", io_timestamp());\
+    fprintf(stderr, fmt, __VA_ARGS__); } while (0)
+
+/* Returns the current timestamp in String form. */
+char* io_timestamp();

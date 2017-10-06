@@ -1,12 +1,5 @@
 
 /*
- * File: IO.h
- * Date: Jun 01, 2017
- * Name: Kevin Tyrrell
- * Version: 2.0.0
- */
-
-/*
 Copyright © 2017 Kevin Tyrrell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,26 +21,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/*
+ * File Name:       Math.h
+ * File Author:     Kevin Tyrrell
+ * Date Created:    02/09/2017
+ */
+
 #pragma once
 
-#include <stdio.h>
-#include <assert.h>
-#include <time.h>
+#include "Math.h"
 
-/* Assert Macro. */
-#define io_assert(condition, msg) assert(condition && msg)
+#define MATH_DIV_CEIL(dividend, divisor) (1 + ((dividend - 1) / divisor))
 
-/* Error messages. */
-#define IO_MSG_OUT_OF_BOUNDS "Requested index was out of bounds!"
-#define IO_MSG_NULL_PTR "Unable to perform operation on NULL pointer!"
-#define IO_MSG_EMPTY "Unable to perform this operation while the container is empty!"
-#define IO_MSG_NOT_SUPPORTED "Unable to perform this operation with a NULL user-provided member function!"
-#define IO_MSG_INVALID_SIZE "Unable to perform this operation with an invalid sizing parameter!"
-
-/* ~~~~~ Input/Output ~~~~~ */
-
-#define IO_CONSOLE_LOG(fmt, ...) do { fprintf(stderr, "%s: ", io_timestamp());\
-    fprintf(stderr, fmt, __VA_ARGS__); } while (0)
-
-/* Returns the current timestamp in String form. */
-char* io_timestamp();
+/* Returns the base to the power of the exponent. */
+unsigned long long math_pow(unsigned long long base, unsigned int exp);
+/* Returns the max of two integers. */
+unsigned int math_max(const unsigned int a, const unsigned int b);
+/* Returns the smallest power of the base which is greater than or equal to the specified value. */
+unsigned int math_min_power_gt(const unsigned int base, const unsigned int greater_than);
